@@ -1,0 +1,173 @@
+<?xml version="1.0" ?>
+<robot name="new_robot_urdf" xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+<xacro:include filename="$(find ros_arduino_bridge)/urdf/materials.xacro" />
+<xacro:include filename="$(find ros_arduino_bridge)/urdf/new_robot_urdf.trans" />
+<xacro:include filename="$(find ros_arduino_bridge)/urdf/new_robot_urdf.gazebo" />
+<link name="base_link">
+  <inertial>
+    <origin xyz="0.16003404098199894 0.07999869526838829 0.1125351775810762" rpy="0 0 0"/>
+    <mass value="42.407840579162674"/>
+    <inertia ixx="0.132584" iyy="0.40276" izz="0.45462" ixy="0.0" iyz="-3e-06" ixz="8.7e-05"/>
+  </inertial>
+  <visual>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="file://$(find ros_arduino_bridge)/meshes/base_link.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="file://$(find ros_arduino_bridge)/meshes/base_link.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+  <gazebo>
+    <plugin name="gazebo_ros2_control" filename="libgazebo_ros2_control.so">
+      <robot_namespace>/</robot_namespace>
+      <parameters>$(find ros_arduino_bridge)/config/ros2_control.yaml</parameters>
+    </plugin>
+  </gazebo>
+</link>
+
+<link name="fore_right_wheel_1">
+  <inertial>
+    <origin xyz="1.9740023782244265e-07 -0.015499526820072326 6.938893903907228e-18" rpy="0 0 0"/>
+    <mass value="1.3808899961285064"/>
+    <inertia ixx="0.000734" iyy="0.001247" izz="0.000734" ixy="0.0" iyz="-0.0" ixz="0.0"/>
+  </inertial>
+  <visual>
+    <origin xyz="-0.256429 0.027778 -0.0425" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="file://$(find ros_arduino_bridge)/meshes/fore_right_wheel_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="-0.256429 0.027778 -0.0425" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="file://$(find ros_arduino_bridge)/meshes/fore_right_wheel_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="back_right_wheel_1">
+  <inertial>
+    <origin xyz="1.9740023783632044e-07 -0.015499526820072333 0.0" rpy="0 0 0"/>
+    <mass value="1.3808899961285064"/>
+    <inertia ixx="0.000734" iyy="0.001247" izz="0.000734" ixy="0.0" iyz="0.0" ixz="0.0"/>
+  </inertial>
+  <visual>
+    <origin xyz="-0.066429 0.027778 -0.0425" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="file://$(find ros_arduino_bridge)/meshes/back_right_wheel_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="-0.066429 0.027778 -0.0425" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="file://$(find ros_arduino_bridge)/meshes/back_right_wheel_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="fore_left_wheel_1">
+  <inertial>
+    <origin xyz="1.9740023782244265e-07 0.015499969520726242 0.0" rpy="0 0 0"/>
+    <mass value="1.3808899961285064"/>
+    <inertia ixx="0.000734" iyy="0.001247" izz="0.000734" ixy="0.0" iyz="-0.0" ixz="0.0"/>
+  </inertial>
+  <visual>
+    <origin xyz="-0.256429 -0.187668 -0.0425" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="file://$(find ros_arduino_bridge)/meshes/fore_left_wheel_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="-0.256429 -0.187668 -0.0425" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="file://$(find ros_arduino_bridge)/meshes/fore_left_wheel_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="back_left_wheel_1">
+  <inertial>
+    <origin xyz="1.97400237864076e-07 0.015499969520726242 0.0" rpy="0 0 0"/>
+    <mass value="1.3808899961285062"/>
+    <inertia ixx="0.000734" iyy="0.001247" izz="0.000734" ixy="0.0" iyz="-0.0" ixz="0.0"/>
+  </inertial>
+  <visual>
+    <origin xyz="-0.066429 -0.187668 -0.0425" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="file://$(find ros_arduino_bridge)/meshes/back_left_wheel_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="-0.066429 -0.187668 -0.0425" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="file://$(find ros_arduino_bridge)/meshes/back_left_wheel_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="lidar_1">
+  <inertial>
+    <origin xyz="-2.7755575615628914e-17 0.0 0.012249999999999955" rpy="0 0 0"/>
+    <mass value="0.7285890320350371"/>
+    <inertia ixx="0.000256" iyy="0.000256" izz="0.000439" ixy="-0.0" iyz="0.0" ixz="0.0"/>
+  </inertial>
+  <visual>
+    <origin xyz="-0.16 -0.08 -0.1655" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="file://$(find ros_arduino_bridge)/meshes/lidar_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="-0.16 -0.08 -0.1655" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="file://$(find ros_arduino_bridge)/meshes/lidar_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<joint name="front_right_wheel_joint" type="continuous">
+  <origin xyz="0.256429 -0.027778 0.0425" rpy="0 0 0"/>
+  <parent link="base_link"/>
+  <child link="fore_right_wheel_1"/>
+  <axis xyz="0.0 -1.0 0.0"/>
+</joint>
+
+<joint name="back_right_wheel_joint" type="continuous">
+  <origin xyz="0.066429 -0.027778 0.0425" rpy="0 0 0"/>
+  <parent link="base_link"/>
+  <child link="back_right_wheel_1"/>
+  <axis xyz="0.0 -1.0 0.0"/>
+</joint>
+
+<joint name="front_left_wheel_joint" type="continuous">
+  <origin xyz="0.256429 0.187668 0.0425" rpy="0 0 0"/>
+  <parent link="base_link"/>
+  <child link="fore_left_wheel_1"/>
+  <axis xyz="0.0 1.0 0.0"/>
+</joint>
+
+<joint name="back_left_wheel_joint" type="continuous">
+  <origin xyz="0.066429 0.187668 0.0425" rpy="0 0 0"/>
+  <parent link="base_link"/>
+  <child link="back_left_wheel_1"/>
+  <axis xyz="0.0 1.0 0.0"/>
+</joint>
+
+<joint name="lidar joint" type="fixed">
+  <origin xyz="0.16 0.08 0.1655" rpy="0 0 0"/>
+  <parent link="base_link"/>
+  <child link="lidar_1"/>
+</joint>
+
+</robot>
