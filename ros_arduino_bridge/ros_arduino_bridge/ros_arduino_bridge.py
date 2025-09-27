@@ -25,7 +25,7 @@ class ROSArduinoBridge(Node):
         self.declare_parameter("base_width", 0.3)  # Distance between left/right wheels
         self.declare_parameter("wheel_radius", 0.075)  # Wheel radius in meters
         self.declare_parameter(
-            "encoder_ticks_per_rev", 11
+            "encoder_ticks_per_rev", 44
         )  # Encoder ticks per revolution
 
         # Max speeds for mapping to PWM
@@ -74,7 +74,7 @@ class ROSArduinoBridge(Node):
         self.robot_state_pub = self.create_publisher(Int32, "robot_state", 10)
         self.raw_encoder_pub = self.create_publisher(String, "raw_encoders", 10)
         # Joint states for visualization (RViz / joint_state_publisher expects /joint_states)
-        self.joint_state_pub = self.create_publisher(JointState, 'joint_states', 10)
+        self.joint_state_pub = self.create_publisher(JointState, "joint_states", 10)
 
         # Subscribers
         self.cmd_vel_sub = self.create_subscription(
@@ -224,18 +224,24 @@ class ROSArduinoBridge(Node):
                         try:
                             self.publish_joint_states()
                         except Exception as e:
-                            self.get_logger().warning(f"Failed to publish joint states: {e}")
+                            self.get_logger().warning(
+                                f"Failed to publish joint states: {e}"
+                            )
                         got_valid = True
                         break
                 except ValueError:
                     # Ignore unrelated debug lines (e.g., "OK", IMU prints). Log at debug level.
-                    self.get_logger().debug(f"Ignoring non-encoder serial line while waiting for encoders: '{line}'")
+                    self.get_logger().debug(
+                        f"Ignoring non-encoder serial line while waiting for encoders: '{line}'"
+                    )
                     continue
             if not got_valid:
                 # Don't warn repeatedly for expected missing responses; log at debug level instead
                 now = time.time()
                 if now - self._last_invalid_encoder_warn > 5.0:
-                    self.get_logger().debug("No valid encoder response received within timeout (debug)")
+                    self.get_logger().debug(
+                        "No valid encoder response received within timeout (debug)"
+                    )
                     self._last_invalid_encoder_warn = now
 
         # IMU reads disabled in encoders-only mode
@@ -281,6 +287,19 @@ class ROSArduinoBridge(Node):
         dt = (current_time - self.last_odom_update).nanoseconds / 1e9
 
         if dt <= 0:
+            return
+
+        # Define a threshold for the minimum change in encoder counts
+        encoder_threshold = 3  # Start with a threshold of 2 ticks
+
+        # Calculate wheel displacements in meters
+        ticks_to_meters = (2 * math.pi * self.wheel_radius) / self.encoder_ticks_per_rev
+        delta_ticks = [
+            self.encoder_counts[i] - self.last_encoder_counts[i] for i in range(4)
+        ]
+
+        # Check if the change in encoder counts is below the threshold
+        if all(abs(tick) < encoder_threshold for tick in delta_ticks):
             return
 
         # Calculate wheel displacements in meters
@@ -416,10 +435,10 @@ class ROSArduinoBridge(Node):
         js = JointState()
         js.header.stamp = self.get_clock().now().to_msg()
         js.name = [
-            'front_left_wheel_joint',
-            'back_left_wheel_joint',
-            'front_right_wheel_joint',
-            'back_right_wheel_joint',
+            "front_left_wheel_joint",
+            "back_left_wheel_joint",
+            "front_right_wheel_joint",
+            "back_right_wheel_joint",
         ]
         js.position = [fl, rl, fr, rr]
 
