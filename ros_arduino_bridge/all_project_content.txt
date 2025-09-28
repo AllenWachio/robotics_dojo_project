@@ -1,0 +1,1584 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypelocation="http://download.ros.org/schema/package_format3.xsd"?>
+<package format="3">
+  <name>ros_arduino_bridge</name>
+  <version>1.0.0</version>
+  <description>ROS2 bridge for Arduino-based 4WD robot with URDF support</description>
+  <maintainer email="you@example.com">Your Name</maintainer>
+  <license>BSD</license>
+
+  <depend>rclpy</depend>
+  <depend>geometry_msgs</depend>
+  <depend>sensor_msgs</depend>
+  <depend>nav_msgs</depend>
+  
+  <depend>std_msgs</depend>
+  <depend>tf2_ros</depend>
+  <depend>tf2_geometry_msgs</depend>
+  <depend>xacro</depend>
+  <depend>robot_state_publisher</depend>
+  <depend>joint_state_publisher</depend>
+  <depend>rviz2</depend>
+  <depend>teleop_twist_keyboard</depend>  <!-- ADD THIS -->
+
+  <exec_depend>python3-pyserial</exec_depend>
+
+  <export>
+    <build_type>ament_python</build_type>
+  </export>
+</package>
+ros_arduino_bridge:
+  ros__parameters:
+    serial_port: "/dev/ttyUSB0"
+    baud_rate: 57600
+    base_width: 0.215446      # Distance between left/right wheels (meters)
+    wheel_radius: 0.085  # Wheel radius (meters)
+    encoder_ticks_per_rev: 44  # Encoder ticks per wheel revolution
+    odom_frame: "odom"
+    base_frame: "base_link"
+    imu_frame: "imu_link"
+    ultrasonic_left_frame: "ultrasonic_left_link"
+    ultrasonic_right_frame: "ultrasonic_right_link"
+controller_manager:
+  ros__parameters:
+    update_rate: 100  # Hz
+
+joint_state_broadcaster:
+  type: joint_state_broadcaster/JointStateBroadcaster
+  ros__parameters:
+    publish_rate: 50  # Hz
+
+diff_drive_controller:
+  type: diff_drive_controller/DiffDriveController
+  ros__parameters:
+    left_wheel_names: ['front_left_wheel_joint', 'back_left_wheel_joint']
+    right_wheel_names: ['front_right_wheel_joint', 'back_right_wheel_joint']
+    wheel_separation: 0.215446  # Updated to match your URDF calculation
+    wheel_radius: 0.085         # Updated to your specification
+    wheel_separation_multiplier: 1.0
+    left_wheel_radius_multiplier: 1.0
+    right_wheel_radius_multiplier: 1.0
+    cmd_vel_timeout: 0.5
+    use_stamped_vel: false
+    publish_rate: 50            # Increased from 5 to 50 for smoother control
+    odom_frame_id: odom
+    base_frame_id: base_link
+    pose_covariance_diagonal: [0.001, 0.001, 0.001, 0.001, 0.001, 0.001]
+    twist_covariance_diagonal: [0.001, 0.001, 0.001, 0.001, 0.001, 0.001]
+    enable_odom_tf: true
+    # Velocity and acceleration limits
+    linear.x.max_velocity: 0.5    # m/s
+    linear.x.min_velocity: -0.5   # m/s
+    angular.z.max_velocity: 1.0   # rad/s
+    angular.z.min_velocity: -1.0  # rad/s
+Panels:
+  - Class: rviz_common/Displays
+    Help Height: 78
+    Name: Displays
+    Property Tree Widget:
+      Expanded:
+        - /Global Options1
+        - /TF1
+      Splitter Ratio: 0.5
+    Tree Height: 527
+Visualization Manager:
+  Class: ""
+  Displays:
+    - Alpha: 0.5
+      Cell Size: 1
+      Class: rviz_default_plugins/Grid
+      Color: 160; 160; 164
+      Enabled: true
+      Line Style:
+        Line Width: 0.03
+        Value: Lines
+      Name: Grid
+      Normal Cell Count: 0
+      Offset:
+        X: 0
+        Y: 0
+        Z: 0
+      Plane: XY
+      Plane Cell Count: 10
+      Reference Frame: base_link
+      Value: true
+    - Class: rviz_default_plugins/RobotModel
+      Description Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /robot_description
+      Enabled: true
+      Links:
+        All Links Enabled: true
+        Expand Joint Details: false
+        Expand Link Details: false
+        Expand Tree: false
+        Group: false
+      Name: RobotModel
+      Update Rate: 30
+      Value: true
+      Visual Enabled: true
+      Collision Enabled: false
+    - Alpha: 0.7
+      Class: rviz_default_plugins/LaserScan
+      Color: 255; 0; 0
+      Enabled: true
+      Name: LaserScan
+      Queue Size: 10
+      Style: Points
+      Topic: /scan
+      Value: true
+    - Alpha: 0.7
+      Class: rviz_default_plugins/Map
+      Color Scheme: map
+      Draw Behind: false
+      Enabled: true
+      Name: Map
+      Topic: /map
+      Value: true
+    - Class: rviz_default_plugins/TF
+      Enabled: true
+      Frame Timeout: 15
+      Frames:
+        All Enabled: true
+      Marker Scale: 1
+      Name: TF
+      Show Arrows: true
+      Show Axes: true
+      Show Names: true
+      Tree: {}
+      Update Interval: 0
+      Value: true
+  Enabled: true
+  Global Options:
+    Background Color: 48; 48; 48
+    Fixed Frame: base_link
+    Frame Rate: 30
+  Name: root
+  Tools:
+    - Class: rviz_default_plugins/Interact
+      Hide Inactive Objects: true
+    - Class: rviz_default_plugins/MoveCamera
+    - Class: rviz_default_plugins/Select
+    - Class: rviz_default_plugins/FocusCamera
+    - Class: rviz_default_plugins/Measure
+      Line color: 128; 128; 0
+    - Class: nav2_rviz_plugins/SetInitialPose
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /initialpose
+    - Class: nav2_rviz_plugins/GoalTool
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /goal_pose
+  Value: true
+  Views:
+    Current:
+      Class: rviz_default_plugins/Orbit
+      Distance: 3
+      Enable Stereo Rendering:
+        Stereo Eye Separation: 0.06
+        Stereo Focal Distance: 1
+        Swap Stereo Eyes: false
+        Value: false
+      Focal Point:
+        X: 0
+        Y: 0
+        Z: 0
+      Focal Shape Fixed Size: true
+      Focal Shape Size: 0.05
+      Invert Z Axis: false
+      Name: Current View
+      Near Clip Distance: 0.01
+      Pitch: 0.785398
+      Target Frame: <Fixed Frame>
+      Value: Orbit (rviz)
+      Yaw: 0.785398
+    Saved: ~
+Window Geometry:
+  Displays:
+    collapsed: false
+  Height: 846
+  Hide Left Dock: false
+  Hide Right Dock: false
+  QMainWindow State: 000000ff00000000fd000000040000000000000156000002f4fc0200000008fb0000001200530065006c0065006300740069006f006e00000001e10000009b0000005c00fffffffb0000001e0054006f006f006c002000500072006f007000650072007400690065007302000001ed000001df00000185000000a3fb000000120056006900650077007300200054006f006f02000001df000002110000018500000122fb000000200054006f006f006c002000500072006f0070006500720074006900650073003203000002880000011d000002210000017afb000000100044006900730070006c006100790073010000003d000002f4000000c900fffffffb0000002000730065006c0065006300740069006f006e00200062007500660066006500720200000138000000aa0000023a00000294fb00000014005700690064006500670065007400730100000041000000e60000000000000000fb0000000c004b0069006e0065006300740200000186000001060000030c00000261000000010000010f000002f4fc0200000003fb0000001e0054006f006f006c002000500072006f00700065007200740069006500730100000041000000780000000000000000fb0000000a00560069006500770073010000003d000002f4000000a400fffffffb0000001200530065006c0065006300740069006f006e010000025a000000b200000000000000000000000200000490000000a9fc0100000001fb0000000a00560069006500770073030000004e00000080000002e10000019700000003000004420000003efc0100000002fb0000000800540069006d00650100000000000004420000000000000000fb0000000800540069006d006501000000000000045000000000000000000000023f000002f400000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
+slam_toolbox:
+  ros__parameters:
+
+    # Plugin params
+    solver_plugin: solver_plugins::CeresSolver
+    ceres_linear_solver: SPARSE_NORMAL_CHOLESKY
+    ceres_preconditioner: SCHUR_JACOBI
+    ceres_trust_strategy: LEVENBERG_MARQUARDT
+    ceres_dogleg_type: TRADITIONAL_DOGLEG
+    ceres_loss_function: None
+
+    # ROS Parameters
+    odom_frame: odom
+    map_frame: map
+    base_frame: base_footprint
+    scan_topic: /scan
+    use_map_saver: true
+    mode: mapping #localization
+
+    # if you'd like to immediately start continuing a map at a given pose
+    # or at the dock, but they are mutually exclusive, if pose is given
+    # will use pose
+    #map_file_name: test_steve
+    # map_start_pose: [0.0, 0.0, 0.0]
+    #map_start_at_dock: true
+
+    debug_logging: false
+    throttle_scans: 1
+    transform_publish_period: 0.02 #if 0 never publishes odometry
+    map_update_interval: 5.0
+    resolution: 0.05
+    min_laser_range: 0.0 #for rastering images
+    max_laser_range: 20.0 #for rastering images
+    minimum_time_interval: 0.5
+    transform_timeout: 0.2
+    tf_buffer_duration: 30.
+    stack_size_to_use: 40000000 #// program needs a larger stack size to serialize large maps
+    enable_interactive_mode: true
+
+    # General Parameters
+    use_scan_matching: true
+    use_scan_barycenter: true
+    minimum_travel_distance: 0.5
+    minimum_travel_heading: 0.5
+    scan_buffer_size: 10
+    scan_buffer_maximum_scan_distance: 10.0
+    link_match_minimum_response_fine: 0.1  
+    link_scan_maximum_distance: 1.5
+    loop_search_maximum_distance: 3.0
+    do_loop_closing: true 
+    loop_match_minimum_chain_size: 10           
+    loop_match_maximum_variance_coarse: 3.0  
+    loop_match_minimum_response_coarse: 0.35    
+    loop_match_minimum_response_fine: 0.45
+
+    # Correlation Parameters - Correlation Parameters
+    correlation_search_space_dimension: 0.5
+    correlation_search_space_resolution: 0.01
+    correlation_search_space_smear_deviation: 0.1 
+
+    # Correlation Parameters - Loop Closure Parameters
+    loop_search_space_dimension: 8.0
+    loop_search_space_resolution: 0.05
+    loop_search_space_smear_deviation: 0.03
+
+    # Scan Matcher Parameters
+    distance_variance_penalty: 0.5      
+    angle_variance_penalty: 1.0    
+
+    fine_search_angle_offset: 0.00349     
+    coarse_search_angle_offset: 0.349   
+    coarse_angle_resolution: 0.0349        
+    minimum_angle_penalty: 0.9
+    minimum_distance_penalty: 0.5
+    use_response_expansion: true
+    min_pass_through: 2
+    occupancy_threshold: 0.1
+[develop]
+script_dir=$base/lib/ros_arduino_bridge
+[install]
+install_scripts=$base/lib/ros_arduino_bridge
+#!/usr/bin/env python3
+import rclpy
+from rclpy.node import Node
+from sensor_msgs.msg import LaserScan
+
+class ScanThrottle(Node):
+    def __init__(self):
+        super().__init__('scan_throttle')
+        self.subscription = self.create_subscription(
+            LaserScan,
+            '/scan',
+            self.listener_callback,
+            10)
+        self.publisher = self.create_publisher(LaserScan, '/scan_throttled', 10)
+        self.last_publish_time = self.get_clock().now()
+        self.rate = 5.0  # Throttle to 5 Hz
+        self.get_logger().info(f"Throttling /scan to {self.rate} Hz")
+
+    def listener_callback(self, msg):
+        current_time = self.get_clock().now()
+        if (current_time - self.last_publish_time).nanoseconds / 1e9 >= 1.0 / self.rate:
+            self.publisher.publish(msg)
+            self.last_publish_time = current_time
+
+def main(args=None):
+    rclpy.init(args=args)
+    scan_throttle = ScanThrottle()
+    rclpy.spin(scan_throttle)
+    scan_throttle.destroy_node()
+    rclpy.shutdown()
+
+if __name__ == '__main__':
+    main()
+<?xml version="1.0" ?>
+<robot name="new_robot_urdf" xmlns:xacro="http://www.ros.org/wiki/xacro" >
+
+<xacro:property name="body_color" value="Gazebo/Silver" />
+
+<!-- removed legacy ROS(1) gazebo ros_control plugin to avoid conflicts with gazebo_ros2_control -->
+<gazebo reference="base_link">
+  <material>${body_color}</material>
+  <mu1>0.2</mu1>
+  <mu2>0.2</mu2>
+  <self_collide>true</self_collide>
+  <gravity>true</gravity>
+</gazebo>
+
+<!-- Add ros2_control plugin for Gazebo -->
+<gazebo>
+  <plugin name="gazebo_ros2_control" filename="libgazebo_ros2_control.so">
+    <ros>
+      <namespace>/</namespace>
+    </ros>
+    <parameters>$(find ros_arduino_bridge)/config/ros2_control.yaml</parameters>
+  </plugin>
+</gazebo>
+
+<gazebo reference="fore_right_wheel_1">
+  <material>${body_color}</material>
+  <mu1>0.2</mu1>
+  <mu2>0.2</mu2>
+  <self_collide>true</self_collide>
+</gazebo>
+
+<gazebo reference="back_right_wheel_1">
+  <material>${body_color}</material>
+  <mu1>0.2</mu1>
+  <mu2>0.2</mu2>
+  <self_collide>true</self_collide>
+</gazebo>
+
+<gazebo reference="fore_left_wheel_1">
+  <material>${body_color}</material>
+  <mu1>0.2</mu1>
+  <mu2>0.2</mu2>
+  <self_collide>true</self_collide>
+</gazebo>
+
+<gazebo reference="back_left_wheel_1">
+  <material>${body_color}</material>
+  <mu1>0.2</mu1>
+  <mu2>0.2</mu2>
+  <self_collide>true</self_collide>
+</gazebo>
+
+<gazebo reference="lidar_1">
+  <material>${body_color}</material>
+  <mu1>0.2</mu1>
+  <mu2>0.2</mu2>
+  <self_collide>true</self_collide>
+</gazebo>
+
+</robot>
+<?xml version="1.0" ?>
+<robot name="new_robot_urdf" xmlns:xacro="http://www.ros.org/wiki/xacro" >
+
+<material name="silver">
+  <color rgba="0.700 0.700 0.700 1.000"/>
+</material>
+
+</robot>
+<?xml version="1.0" ?>
+<robot name="new_robot_urdf" xmlns:xacro="http://www.ros.org/wiki/xacro" >
+
+<transmission name="front_right_wheel_joint_tran">
+  <type>transmission_interface/SimpleTransmission</type>
+  <joint name="front_right_wheel_joint">
+    <hardwareInterface>hardware_interface/VelocityJointInterface</hardwareInterface>
+  </joint>
+  <actuator name="front_right_wheel_joint_actr">
+    <hardwareInterface>hardware_interface/VelocityJointInterface</hardwareInterface>
+    <mechanicalReduction>1</mechanicalReduction>
+  </actuator>
+</transmission>
+
+<transmission name="back_right_wheel_joint_tran">
+  <type>transmission_interface/SimpleTransmission</type>
+  <joint name="back_right_wheel_joint">
+    <hardwareInterface>hardware_interface/VelocityJointInterface</hardwareInterface>
+  </joint>
+  <actuator name="back_right_wheel_joint_actr">
+    <hardwareInterface>hardware_interface/VelocityJointInterface</hardwareInterface>
+    <mechanicalReduction>1</mechanicalReduction>
+  </actuator>
+</transmission>
+
+<transmission name="front_left_wheel_joint_tran">
+  <type>transmission_interface/SimpleTransmission</type>
+  <joint name="front_left_wheel_joint">
+    <hardwareInterface>hardware_interface/VelocityJointInterface</hardwareInterface>
+  </joint>
+  <actuator name="front_left_wheel_joint_actr">
+    <hardwareInterface>hardware_interface/VelocityJointInterface</hardwareInterface>
+    <mechanicalReduction>1</mechanicalReduction>
+  </actuator>
+</transmission>
+
+<transmission name="back_left_wheel_joint_tran">
+  <type>transmission_interface/SimpleTransmission</type>
+  <joint name="back_left_wheel_joint">
+    <hardwareInterface>hardware_interface/VelocityJointInterface</hardwareInterface>
+  </joint>
+  <actuator name="back_left_wheel_joint_actr">
+    <hardwareInterface>hardware_interface/VelocityJointInterface</hardwareInterface>
+    <mechanicalReduction>1</mechanicalReduction>
+  </actuator>
+</transmission>
+
+</robot>
+<?xml version="1.0" ?>
+<robot name="new_robot_urdf" xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+<xacro:include filename="$(find ros_arduino_bridge)/urdf/materials.xacro" />
+<xacro:include filename="$(find ros_arduino_bridge)/urdf/new_robot_urdf.trans" />
+<xacro:include filename="$(find ros_arduino_bridge)/urdf/new_robot_urdf.gazebo" />
+<link name="base_link">
+  <inertial>
+    <origin xyz="0.16003404098199894 0.07999869526838829 0.1125351775810762" rpy="0 0 0"/>
+    <mass value="42.407840579162674"/>
+    <inertia ixx="0.132584" iyy="0.40276" izz="0.45462" ixy="0.0" iyz="-3e-06" ixz="8.7e-05"/>
+  </inertial>
+  <visual>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="file://$(find ros_arduino_bridge)/meshes/base_link.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="file://$(find ros_arduino_bridge)/meshes/base_link.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+  <gazebo>
+    <plugin name="gazebo_ros2_control" filename="libgazebo_ros2_control.so">
+      <robot_namespace>/</robot_namespace>
+      <parameters>$(find ros_arduino_bridge)/config/ros2_control.yaml</parameters>
+    </plugin>
+  </gazebo>
+</link>
+
+<link name="fore_right_wheel_1">
+  <inertial>
+    <origin xyz="1.9740023782244265e-07 -0.015499526820072326 6.938893903907228e-18" rpy="0 0 0"/>
+    <mass value="1.3808899961285064"/>
+    <inertia ixx="0.000734" iyy="0.001247" izz="0.000734" ixy="0.0" iyz="-0.0" ixz="0.0"/>
+  </inertial>
+  <visual>
+    <origin xyz="-0.256429 0.027778 -0.0425" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="file://$(find ros_arduino_bridge)/meshes/fore_right_wheel_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="-0.256429 0.027778 -0.0425" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="file://$(find ros_arduino_bridge)/meshes/fore_right_wheel_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="back_right_wheel_1">
+  <inertial>
+    <origin xyz="1.9740023783632044e-07 -0.015499526820072333 0.0" rpy="0 0 0"/>
+    <mass value="1.3808899961285064"/>
+    <inertia ixx="0.000734" iyy="0.001247" izz="0.000734" ixy="0.0" iyz="0.0" ixz="0.0"/>
+  </inertial>
+  <visual>
+    <origin xyz="-0.066429 0.027778 -0.0425" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="file://$(find ros_arduino_bridge)/meshes/back_right_wheel_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="-0.066429 0.027778 -0.0425" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="file://$(find ros_arduino_bridge)/meshes/back_right_wheel_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="fore_left_wheel_1">
+  <inertial>
+    <origin xyz="1.9740023782244265e-07 0.015499969520726242 0.0" rpy="0 0 0"/>
+    <mass value="1.3808899961285064"/>
+    <inertia ixx="0.000734" iyy="0.001247" izz="0.000734" ixy="0.0" iyz="-0.0" ixz="0.0"/>
+  </inertial>
+  <visual>
+    <origin xyz="-0.256429 -0.187668 -0.0425" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="file://$(find ros_arduino_bridge)/meshes/fore_left_wheel_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="-0.256429 -0.187668 -0.0425" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="file://$(find ros_arduino_bridge)/meshes/fore_left_wheel_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="back_left_wheel_1">
+  <inertial>
+    <origin xyz="1.97400237864076e-07 0.015499969520726242 0.0" rpy="0 0 0"/>
+    <mass value="1.3808899961285062"/>
+    <inertia ixx="0.000734" iyy="0.001247" izz="0.000734" ixy="0.0" iyz="-0.0" ixz="0.0"/>
+  </inertial>
+  <visual>
+    <origin xyz="-0.066429 -0.187668 -0.0425" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="file://$(find ros_arduino_bridge)/meshes/back_left_wheel_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="-0.066429 -0.187668 -0.0425" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="file://$(find ros_arduino_bridge)/meshes/back_left_wheel_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="lidar_1">
+  <inertial>
+    <origin xyz="-2.7755575615628914e-17 0.0 0.012249999999999955" rpy="0 0 0"/>
+    <mass value="0.7285890320350371"/>
+    <inertia ixx="0.000256" iyy="0.000256" izz="0.000439" ixy="-0.0" iyz="0.0" ixz="0.0"/>
+  </inertial>
+  <visual>
+    <origin xyz="-0.16 -0.08 -0.1655" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="file://$(find ros_arduino_bridge)/meshes/lidar_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="-0.16 -0.08 -0.1655" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="file://$(find ros_arduino_bridge)/meshes/lidar_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<joint name="front_right_wheel_joint" type="continuous">
+  <origin xyz="0.256429 -0.027778 0.0425" rpy="0 0 0"/>
+  <parent link="base_link"/>
+  <child link="fore_right_wheel_1"/>
+  <axis xyz="0.0 -1.0 0.0"/>
+</joint>
+
+<joint name="back_right_wheel_joint" type="continuous">
+  <origin xyz="0.066429 -0.027778 0.0425" rpy="0 0 0"/>
+  <parent link="base_link"/>
+  <child link="back_right_wheel_1"/>
+  <axis xyz="0.0 -1.0 0.0"/>
+</joint>
+
+<joint name="front_left_wheel_joint" type="continuous">
+  <origin xyz="0.256429 0.187668 0.0425" rpy="0 0 0"/>
+  <parent link="base_link"/>
+  <child link="fore_left_wheel_1"/>
+  <axis xyz="0.0 1.0 0.0"/>
+</joint>
+
+<joint name="back_left_wheel_joint" type="continuous">
+  <origin xyz="0.066429 0.187668 0.0425" rpy="0 0 0"/>
+  <parent link="base_link"/>
+  <child link="back_left_wheel_1"/>
+  <axis xyz="0.0 1.0 0.0"/>
+</joint>
+
+<joint name="lidar joint" type="fixed">
+  <origin xyz="0.16 0.08 0.1655" rpy="0 0 0"/>
+  <parent link="base_link"/>
+  <child link="lidar_1"/>
+</joint>
+
+</robot>
+ros_arduino_bridge
+===================
+
+A small ROS 2 ament_python package that bridges an Arduino-based 4WD robot to ROS 2.
+
+This README documents the serial protocol expected by the node, build and launch steps, quick checks, and troubleshooting tips.
+
+Serial protocol (Arduino <-> ROS node)
+-------------------------------------
+The ROS node communicates with the Arduino using a simple ASCII command/response protocol over a serial port. Each command sent from ROS expects a single-line response terminated by a newline. Commands are sent with a trailing carriage return ("\r").
+
+Commands sent by ROS (requests):
+- r  : Reset encoders (no response required but Arduino may respond with an acknowledgment).
+- e  : Request encoders. Arduino should reply with four integers separated by spaces, e.g.:
+       "123 456 789 1011\n"  (M1 M2 M3 M4)
+- i  : Request IMU angle (only requested when robot_state == 1). Arduino should reply with one float (radians), e.g.:
+       "1.5708\n"
+- y  : Request ultrasonic distances. Arduino should reply with two numbers in centimeters, e.g.:
+       "120.5 118.0\n"  (left_cm right_cm)
+- s  : Request robot state. Arduino should reply with a single integer state code (e.g., 0,1,2).
+
+Motor command format (from ROS to Arduino):
+- The node sends a motor command string of the form:
+    m left1:right1:left2:right2\r
+  where left*/right* are integer PWM values in [-255, 255]. Example:
+    "m 120:120:120:120\r"
+  Mapping from Twist -> PWM is done in the node assuming a max linear speed (default mapping uses 0.5 m/s -> 255 PWM). Calibrate this mapping for your robot.
+
+Important implementation notes
+- The Arduino must respond promptly with one line per request. The node uses a small select() timeout on the serial port to read lines.
+- Encoder rollover is not handled by the node; if your Arduino encoder counters wrap, consider sending delta counts or using larger counters and handling wrap in the node.
+- The node expects the motor ordering M1=front_left, M2=front_right, M3=rear_left, M4=rear_right by default.
+
+Build & install
+---------------
+From the root of your ROS 2 workspace (the directory that contains `src/`):
+
+```bash
+# build only this package
+colcon build --packages-select ros_arduino_bridge
+
+# source the workspace (bash)
+source install/setup.bash
+```
+
+Dependencies
+- System / apt: python3-pyserial (or install using pip)
+- Python (package): pyserial is added to `install_requires` so `pip`-based installs will pull it in.
+
+If you prefer pip+venv you can also install the package's Python deps with:
+
+```bash
+python3 -m pip install -r <(python3 -c "import setuptools; print('pyserial')")
+```
+
+Run / Launch
+-------------
+Default launch (starts robot_state_publisher, the bridge node, and RViz):
+
+```bash
+ros2 launch ros_arduino_bridge arduino_bridge.py
+```
+
+Common overrides:
+- Disable RViz:
+
+```bash
+ros2 launch ros_arduino_bridge arduino_bridge.py use_rviz:=false
+```
+
+- Set serial port (e.g., if Arduino is /dev/ttyACM0):
+
+```bash
+ros2 launch ros_arduino_bridge arduino_bridge.py serial_port:=/dev/ttyUSB0
+```
+
+Run node directly for debugging (after sourcing):
+
+```bash
+ros2 run ros_arduino_bridge ros_arduino_bridge
+```
+
+Control with keyboard (teleop)
+--------------------------------
+This package includes support for `teleop_twist_keyboard` (declared in `package.xml`). To control the robot using your keyboard:
+
+1. Launch the bridge (and optionally RViz):
+
+```bash
+ros2 launch ros_arduino_bridge arduino_bridge.py
+```
+
+2. In another terminal (after sourcing), start teleop:
+
+```bash
+ros2 run teleop_twist_keyboard teleop_twist_keyboard
+```
+
+3. Focus the teleop terminal and press the forward key (usually the up-arrow or 'i' depending on the teleop layout) to publish `cmd_vel` messages. The bridge subscribes to `/cmd_vel` and converts Twist messages into motor PWM commands sent to the Arduino.
+
+Note: By default, forward on teleop sends a positive linear.x which the node maps into PWM using the configured `max_speed` mapping; tune `base_width`, `wheel_radius`, and `encoder_ticks_per_rev` parameters if motion looks incorrect.
+
+RViz wheel visualization
+-------------------------
+The node now publishes `sensor_msgs/JointState` messages on `/joint_states` (wheel joints: `front_left_wheel_joint`, `back_left_wheel_joint`, `front_right_wheel_joint`, `back_right_wheel_joint`).
+When RViz displays the robot model (loaded via `robot_state_publisher`) those joint positions will animate the wheels as encoder counts change.
+
+Quick checks
+- List topics:
+
+```bash
+ros2 topic list
+```
+
+- Echo raw encoders:
+
+```bash
+ros2 topic echo /raw_encoders
+```
+
+- Check odom:
+
+```bash
+ros2 topic echo /odom
+```
+
+Troubleshooting
+- Serial port permission denied:
+  - Add your user to the dialout group on Linux:
+
+```bash
+sudo usermod -a -G dialout $USER
+# then log out and back in or run a new session
+```
+
+- If the node cannot connect to the serial port, ensure the `serial_port` parameter matches your device and the Arduino is powered / connected.
+- If you see malformed data warnings, verify the Arduino prints numeric responses exactly as expected (single-line, space-separated numbers where required).
+- If TF/odom drifts badly, verify `encoder_ticks_per_rev`, `wheel_radius`, and `base_width` parameters match the real robot.
+
+Contributing
+- Update the `urdf_loader` package_name argument if you split URDF into another package.
+- Consider improving protocol reliability by adding response prefixes or sequence numbers.
+
+License
+- BSD (as declared in package.xml)
+from setuptools import setup
+import os
+from glob import glob
+
+package_name = 'ros_arduino_bridge'
+
+setup(
+    name=package_name,
+    version='1.0.0',
+    packages=[package_name],
+    data_files=[
+        ('share/ament_index/resource_index/packages',
+            ['resource/' + package_name]),
+        ('share/' + package_name, ['package.xml']),
+        (os.path.join('share', package_name, 'launch'), glob('launch/*.py')),
+        (os.path.join('share', package_name, 'config'), glob('config/*.yaml')),
+        (os.path.join('share', package_name, 'config'), glob('config/*.rviz')),  # ADD THIS
+        (os.path.join('share', package_name, 'urdf'), glob('urdf/*')),          # ADD THIS
+        (os.path.join('share', package_name, 'meshes'), glob('meshes/*')),      # ADD THIS
+    ],
+    install_requires=['setuptools', 'pyserial'],
+    zip_safe=True,
+    maintainer='Your Name',
+    maintainer_email='you@example.com',
+    description='ROS2 bridge for Arduino-based 4WD robot',
+    license='BSD',
+    tests_require=['pytest'],
+    entry_points={
+        'console_scripts': [
+            'ros_arduino_bridge = ros_arduino_bridge.ros_arduino_bridge:main',
+            'scan_throttle = ros_arduino_bridge.scan_throttle:main',
+        ],
+    },
+)
+
+#!/usr/bin/env python3
+
+import rclpy
+from rclpy.node import Node
+from geometry_msgs.msg import Twist
+from sensor_msgs.msg import Imu, Range, JointState
+from nav_msgs.msg import Odometry
+from std_msgs.msg import Float32, Int32, String, ColorRGBA
+import serial
+import threading
+import time
+import math
+from tf2_ros import TransformBroadcaster
+from geometry_msgs.msg import TransformStamped, Quaternion
+import select
+
+
+class ROSArduinoBridge(Node):
+    def __init__(self):
+        super().__init__("ros_arduino_bridge")
+
+        # Parameters
+        self.declare_parameter("serial_port", "/dev/ttyUSB0")
+        self.declare_parameter("baud_rate", 57600)
+        self.declare_parameter("base_width", 0.3)  # Distance between left/right wheels
+        self.declare_parameter("wheel_radius", 0.075)  # Wheel radius in meters
+        self.declare_parameter(
+            "encoder_ticks_per_rev", 44
+        )  # Encoder ticks per revolution
+
+        # Max speeds for mapping to PWM
+        self.declare_parameter("max_linear_speed", 0.5)
+        self.declare_parameter("max_angular_speed", 1.0)
+
+        self.declare_parameter("odom_frame", "odom")
+        self.declare_parameter("base_frame", "base_link")
+
+        # Get parameters
+        self.serial_port = self.get_parameter("serial_port").value
+        self.baud_rate = self.get_parameter("baud_rate").value
+        self.base_width = self.get_parameter("base_width").value
+        self.wheel_radius = self.get_parameter("wheel_radius").value
+        self.encoder_ticks_per_rev = self.get_parameter("encoder_ticks_per_rev").value
+        self.max_linear_speed = self.get_parameter("max_linear_speed").value
+        self.max_angular_speed = self.get_parameter("max_angular_speed").value
+        # Frames
+        self.odom_frame = self.get_parameter("odom_frame").value
+        self.base_frame = self.get_parameter("base_frame").value
+
+        # Serial communication
+        self.serial = None
+        self.serial_lock = threading.Lock()
+        self.connect_serial()
+
+        # Robot state
+        self.encoder_counts = [0, 0, 0, 0]  # M1, M2, M3, M4
+        self.last_encoder_counts = [0, 0, 0, 0]
+        self.imu_angle = 0.0
+        self.ultrasonic_ranges = [0.0, 0.0]  # Left, Right (in meters)
+        self.robot_state = 2  # Default to stationary
+        self.odom_x = 0.0
+        self.odom_y = 0.0
+        self.odom_theta = 0.0
+        self.last_odom_update = self.get_clock().now()
+        # Throttle warnings for invalid encoder data
+        self._last_invalid_encoder_warn = 0.0
+
+        # Publishers
+        self.odom_pub = self.create_publisher(Odometry, "odom", 10)
+        # IMU and ultrasonic publishers temporarily disabled (encoders-only mode)
+        # self.imu_pub = self.create_publisher(Imu, "imu/data", 10)
+        # self.ultrasonic_left_pub = self.create_publisher(Range, "ultrasonic/left", 10)
+        # self.ultrasonic_right_pub = self.create_publisher(Range, "ultrasonic/right", 10)
+        self.robot_state_pub = self.create_publisher(Int32, "robot_state", 10)
+        self.raw_encoder_pub = self.create_publisher(String, "raw_encoders", 10)
+        # Joint states for visualization (RViz / joint_state_publisher expects /joint_states)
+        self.joint_state_pub = self.create_publisher(JointState, "joint_states", 10)
+
+        # Subscribers
+        self.cmd_vel_sub = self.create_subscription(
+            Twist, "cmd_vel", self.cmd_vel_callback, 10
+        )
+
+        # TF Broadcaster
+        self.tf_broadcaster = TransformBroadcaster(self)
+
+        # Timers
+        self.data_timer = self.create_timer(0.05, self.update_sensor_data)  # 20Hz
+        self.odom_timer = self.create_timer(0.1, self.update_odometry)  # 10Hz
+        self.state_timer = self.create_timer(1.0, self.publish_robot_state)  # 1Hz
+
+        self.get_logger().info("ROS Arduino Bridge node started")
+
+    def connect_serial(self):
+        """Connect to Arduino serial port"""
+        try:
+            self.serial = serial.Serial(
+                port=self.serial_port,
+                baudrate=self.baud_rate,
+                timeout=1.0,
+                write_timeout=1.0,
+            )
+            time.sleep(2)  # Wait for Arduino to reset
+            # Clear any startup messages from the Arduino (e.g., IMU or debug prints)
+            try:
+                self.serial.reset_input_buffer()
+            except Exception:
+                # Older pyserial versions may not have reset_input_buffer
+                pass
+            self.get_logger().info(f"Connected to Arduino on {self.serial_port}")
+
+            # Reset encoders on startup
+            self.send_command("r")
+
+        except serial.SerialException as e:
+            self.get_logger().error(f"Failed to connect to Arduino: {e}")
+            # Schedule reconnection attempt
+            self.create_timer(5.0, self.reconnect_serial)
+
+    def reconnect_serial(self):
+        """Attempt to reconnect to Arduino"""
+        if self.serial is None or not self.serial.is_open:
+            self.get_logger().info("Attempting to reconnect to Arduino...")
+            self.connect_serial()
+
+    def send_command(self, command):
+        """Send command to Arduino with thread safety"""
+        with self.serial_lock:
+            if self.serial and self.serial.is_open:
+                try:
+                    full_command = command + "\r"
+                    self.serial.write(full_command.encode())
+                    self.serial.flush()
+                    return True
+                except Exception as e:
+                    self.get_logger().error(f"Error sending command: {e}")
+                    self.serial.close()
+                    self.serial = None
+        return False
+
+    def read_serial_line(self):
+        """Read a line from serial with timeout"""
+        if self.serial and self.serial.is_open:
+            try:
+                # Use select to check if data is available (non-blocking)
+                ready, _, _ = select.select([self.serial], [], [], 0.1)
+                if ready:
+                    line = self.serial.readline().decode("utf-8").strip()
+                    if line:
+                        return line
+            except Exception as e:
+                self.get_logger().error(f"Error reading serial: {e}")
+                self.serial.close()
+                self.serial = None
+        return None
+
+    def cmd_vel_callback(self, msg):
+        """Convert Twist message to motor speeds for 4WD"""
+        # Convert linear and angular velocities to wheel speeds
+        linear = msg.linear.x
+        angular = msg.angular.z
+
+        # For 4-wheel drive skid-steer robot:
+        # Left wheels: linear - (angular * base_width/2)
+        # Right wheels: linear + (angular * base_width/2)
+        # Handle in-place turns: if linear is near zero, map angular to
+        # opposing wheel velocities so the robot rotates about its center.
+        if abs(linear) < 1e-6 and abs(angular) > 1e-6:
+            left_speed = -angular * (self.base_width / 2.0)
+            right_speed = angular * (self.base_width / 2.0)
+        else:
+            left_speed = linear - (angular * self.base_width / 2.0)
+            right_speed = linear + (angular * self.base_width / 2.0)
+
+        # Convert m/s to PWM values using configured max_linear_speed
+        # Protect against division by zero
+        max_lin = float(self.max_linear_speed) if self.max_linear_speed != 0 else 0.5
+        left_pwm = int((left_speed / max_lin) * 255)
+        right_pwm = int((right_speed / max_lin) * 255)
+
+        # Limit PWM values
+        left_pwm = max(-255, min(255, left_pwm))
+        right_pwm = max(-255, min(255, right_pwm))
+
+        # Send command to Arduino: m left1:right1:left2:right2
+        # Assuming M1=front_left, M2=front_right, M3=rear_left, M4=rear_right
+        command = f"m {left_pwm}:{right_pwm}:{left_pwm}:{right_pwm}"
+        self.send_command(command)
+
+        # Helpful debug: show computed speeds and PWM mapping so teleop can
+        # be tuned if turning doesn't behave as expected.
+        self.get_logger().debug(
+            f"cmd_vel -> linear={linear:.3f} angular={angular:.3f} | "
+            f"left_speed={left_speed:.3f} right_speed={right_speed:.3f} | "
+            f"left_pwm={left_pwm} right_pwm={right_pwm} | cmd={command}"
+        )
+
+    def update_sensor_data(self):
+        """Periodically read sensor data from Arduino"""
+        if not self.serial or not self.serial.is_open:
+            return
+
+        # Read encoders - robustly wait for a valid 4-int response, ignore other lines
+        if self.send_command("e"):
+            start = time.time()
+            got_valid = False
+            # Wait up to 1.0s for a valid encoder line (increased timeout)
+            while time.time() - start < 10:
+                line = self.read_serial_line()
+                if not line:
+                    continue
+                try:
+                    counts = list(map(int, line.split()))
+                    if len(counts) == 4:
+                        self.encoder_counts = counts
+
+                        # Publish raw encoder data
+                        encoder_msg = String()
+                        encoder_msg.data = (
+                            f"{counts[0]},{counts[1]},{counts[2]},{counts[3]}"
+                        )
+                        self.raw_encoder_pub.publish(encoder_msg)
+                        # Publish joint states for visualization
+                        try:
+                            self.publish_joint_states()
+                        except Exception as e:
+                            self.get_logger().warning(
+                                f"Failed to publish joint states: {e}"
+                            )
+                        got_valid = True
+                        break
+                except ValueError:
+                    # Ignore unrelated debug lines (e.g., "OK", IMU prints). Log at debug level.
+                    self.get_logger().debug(
+                        f"Ignoring non-encoder serial line while waiting for encoders: '{line}'"
+                    )
+                    continue
+            if not got_valid:
+                # Don't warn repeatedly for expected missing responses; log at debug level instead
+                now = time.time()
+                if now - self._last_invalid_encoder_warn > 5.0:
+                    self.get_logger().debug(
+                        "No valid encoder response received within timeout (debug)"
+                    )
+                    self._last_invalid_encoder_warn = now
+
+        # IMU reads disabled in encoders-only mode
+        # # Read IMU angle (only when moving based on Arduino state machine)
+        # if self.robot_state == 1:  # MOVING state
+        #     if self.send_command("i"):
+        #         line = self.read_serial_line()
+        #         if line:
+        #             try:
+        #                 self.imu_angle = float(line)
+        #                 self.publish_imu_data()
+        #             except ValueError:
+        #                 pass
+
+        # Ultrasonic reads disabled in encoders-only mode
+        # # Read ultrasonic sensors
+        # if self.robot_state != 0:  # Not OFFLOADING state
+        #     if self.send_command("y"):
+        #         line = self.read_serial_line()
+        #         if line:
+        #             try:
+        #                 distances = list(map(float, line.split()))
+        #                 if len(distances) == 2:
+        #                     self.ultrasonic_ranges = [
+        #                         d / 100.0 for d in distances
+        #                     ]  # cm to meters
+        #                     self.publish_ultrasonic_data()
+        #             except ValueError:
+        #                 pass
+
+        # Read robot state
+        if self.send_command("s"):
+            line = self.read_serial_line()
+            if line:
+                try:
+                    self.robot_state = int(line)
+                except ValueError:
+                    pass
+
+    def update_odometry(self):
+        """Calculate and publish odometry from encoder data"""
+        current_time = self.get_clock().now()
+        dt = (current_time - self.last_odom_update).nanoseconds / 1e9
+
+        if dt <= 0:
+            return
+
+        # Define a threshold for the minimum change in encoder counts
+        encoder_threshold = 3  # Start with a threshold of 2 ticks
+
+        # Calculate wheel displacements in meters
+        ticks_to_meters = (2 * math.pi * self.wheel_radius) / self.encoder_ticks_per_rev
+        delta_ticks = [
+            self.encoder_counts[i] - self.last_encoder_counts[i] for i in range(4)
+        ]
+
+        # Check if the change in encoder counts is below the threshold
+        if all(abs(tick) < encoder_threshold for tick in delta_ticks):
+            return
+
+        # Calculate wheel displacements in meters
+        # Convert encoder ticks to distance
+        ticks_to_meters = (2 * math.pi * self.wheel_radius) / self.encoder_ticks_per_rev
+
+        delta_ticks = [
+            self.encoder_counts[i] - self.last_encoder_counts[i] for i in range(4)
+        ]
+
+        # Average left and right wheel displacements
+        # Assuming M1 and M3 are left wheels, M2 and M4 are right wheels
+        left_distance = (delta_ticks[0] + delta_ticks[2]) / 2 * ticks_to_meters
+        right_distance = (delta_ticks[1] + delta_ticks[3]) / 2 * ticks_to_meters
+
+        # Calculate linear and angular displacement
+        linear_displacement = (left_distance + right_distance) / 2
+        angular_displacement = (right_distance - left_distance) / self.base_width
+
+        # Update pose
+        self.odom_x += linear_displacement * math.cos(self.odom_theta)
+        self.odom_y += linear_displacement * math.sin(self.odom_theta)
+        self.odom_theta += angular_displacement
+
+        # Calculate velocities
+        linear_velocity = linear_displacement / dt
+        angular_velocity = angular_displacement / dt
+
+        # Publish odometry
+        self.publish_odometry(linear_velocity, angular_velocity, current_time)
+
+        # Publish TF
+        self.publish_tf(current_time)
+
+        # Update last values
+        self.last_encoder_counts = self.encoder_counts.copy()
+        self.last_odom_update = current_time
+
+    def publish_odometry(self, linear_vel, angular_vel, timestamp):
+        """Publish odometry message"""
+        odom_msg = Odometry()
+        odom_msg.header.stamp = timestamp.to_msg()
+        odom_msg.header.frame_id = self.odom_frame
+        odom_msg.child_frame_id = self.base_frame
+
+        # Set position
+        odom_msg.pose.pose.position.x = self.odom_x
+        odom_msg.pose.pose.position.y = self.odom_y
+        odom_msg.pose.pose.position.z = 0.0
+
+        # Convert theta to quaternion
+        q = Quaternion()
+        q.x = 0.0
+        q.y = 0.0
+        q.z = math.sin(self.odom_theta / 2)
+        q.w = math.cos(self.odom_theta / 2)
+        odom_msg.pose.pose.orientation = q
+
+        # Set velocity
+        odom_msg.twist.twist.linear.x = linear_vel
+        odom_msg.twist.twist.angular.z = angular_vel
+
+        self.odom_pub.publish(odom_msg)
+
+    def publish_tf(self, timestamp):
+        """Publish transform from odom to base_link"""
+        transform = TransformStamped()
+        transform.header.stamp = timestamp.to_msg()
+        transform.header.frame_id = self.odom_frame
+        transform.child_frame_id = self.base_frame
+
+        transform.transform.translation.x = self.odom_x
+        transform.transform.translation.y = self.odom_y
+        transform.transform.translation.z = 0.0
+
+        q = Quaternion()
+        q.x = 0.0
+        q.y = 0.0
+        q.z = math.sin(self.odom_theta / 2)
+        q.w = math.cos(self.odom_theta / 2)
+        transform.transform.rotation = q
+
+        self.tf_broadcaster.sendTransform(transform)
+
+    def publish_imu_data(self):
+        """Publish IMU data"""
+        # IMU publishing disabled in encoders-only mode
+        # imu_msg = Imu()
+        # imu_msg.header.stamp = self.get_clock().now().to_msg()
+        # imu_msg.header.frame_id = "imu_link"
+        # q = Quaternion()
+        # q.x = 0.0
+        # q.y = 0.0
+        # q.z = math.sin(self.imu_angle / 2)
+        # q.w = math.cos(self.imu_angle / 2)
+        # imu_msg.orientation = q
+        # self.imu_pub.publish(imu_msg)
+
+    def publish_ultrasonic_data(self):
+        """Publish ultrasonic sensor data"""
+        # Ultrasonic publishing disabled in encoders-only mode
+        # left_range = Range()
+        # left_range.header.stamp = self.get_clock().now().to_msg()
+        # left_range.header.frame_id = "ultrasonic_left_link"
+        # left_range.radiation_type = Range.ULTRASOUND
+        # left_range.field_of_view = 0.26
+        # left_range.min_range = 0.02
+        # left_range.max_range = 4.0
+        # left_range.range = self.ultrasonic_ranges[0]
+        # self.ultrasonic_left_pub.publish(left_range)
+        # right_range = Range()
+        # right_range.header.stamp = self.get_clock().now().to_msg()
+        # right_range.header.frame_id = "ultrasonic_right_link"
+        # right_range.radiation_type = Range.ULTRASOUND
+        # right_range.field_of_view = 0.26
+        # right_range.min_range = 0.02
+        # right_range.max_range = 4.0
+        # right_range.range = self.ultrasonic_ranges[1]
+        # self.ultrasonic_right_pub.publish(right_range)
+
+    def publish_joint_states(self):
+        """Publish wheel joint states for RViz visualization."""
+        # Convert encoder counts to wheel angles (radians)
+        # ticks -> revolutions -> radians
+        ticks_to_rad = (2 * math.pi) / float(self.encoder_ticks_per_rev)
+
+        # Assuming encoder_counts order: M1=front_left, M2=front_right, M3=rear_left, M4=rear_right
+        fl = self.encoder_counts[0] * ticks_to_rad
+        fr = self.encoder_counts[1] * ticks_to_rad
+        rl = self.encoder_counts[2] * ticks_to_rad
+        rr = self.encoder_counts[3] * ticks_to_rad
+
+        js = JointState()
+        js.header.stamp = self.get_clock().now().to_msg()
+        js.name = [
+            "front_left_wheel_joint",
+            "back_left_wheel_joint",
+            "front_right_wheel_joint",
+            "back_right_wheel_joint",
+        ]
+        js.position = [fl, rl, fr, rr]
+
+        self.joint_state_pub.publish(js)
+
+    def publish_robot_state(self):
+        """Publish robot state"""
+        state_msg = Int32()
+        state_msg.data = self.robot_state
+        self.robot_state_pub.publish(state_msg)
+
+
+def main(args=None):
+    rclpy.init(args=args)
+    node = ROSArduinoBridge()
+
+    try:
+        rclpy.spin(node)
+    except KeyboardInterrupt:
+        pass
+    finally:
+        node.destroy_node()
+        rclpy.shutdown()
+
+
+if __name__ == "__main__":
+    main()
+# Copyright 2017 Open Source Robotics Foundation, Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+from ament_flake8.main import main_with_errors
+import pytest
+
+
+@pytest.mark.flake8
+@pytest.mark.linter
+def test_flake8():
+    rc, errors = main_with_errors(argv=[])
+    assert rc == 0, \
+        'Found %d code style errors / warnings:\n' % len(errors) + \
+        '\n'.join(errors)
+# Copyright 2015 Open Source Robotics Foundation, Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+from ament_pep257.main import main
+import pytest
+
+
+@pytest.mark.linter
+@pytest.mark.pep257
+def test_pep257():
+    rc = main(argv=['.', 'test'])
+    assert rc == 0, 'Found code style errors / warnings'
+# Copyright 2015 Open Source Robotics Foundation, Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+from ament_copyright.main import main
+import pytest
+
+
+# Remove the `skip` decorator once the source file(s) have a copyright header
+@pytest.mark.skip(reason='No copyright header has been placed in the generated source file.')
+@pytest.mark.copyright
+@pytest.mark.linter
+def test_copyright():
+    rc = main(argv=['.', 'test'])
+    assert rc == 0, 'Found errors'
+from launch import LaunchDescription
+from launch_ros.actions import Node
+from launch.actions import ExecuteProcess, RegisterEventHandler, TimerAction
+from launch.event_handlers import OnProcessStart
+from launch.substitutions import FindExecutable
+
+def generate_launch_description():
+    # Arduino Bridge Node
+    arduino_bridge = Node(
+        package='ros_arduino_bridge',
+        executable='ros_arduino_bridge',
+        name='ros_arduino_bridge',
+        output='screen',
+        parameters=[{
+            'serial_port': '/dev/ttyUSB0',
+            'baud_rate': 57600,
+            'base_width': 0.215446,
+            'wheel_radius': 0.085,
+            'encoder_ticks_per_rev': 44
+        }]
+    )
+    
+    # Robot State Publisher for your URDF
+    robot_state_publisher = Node(
+        package='robot_state_publisher',
+        executable='robot_state_publisher',
+        name='robot_state_publisher',
+        output='screen',
+        parameters=[{
+            'robot_description': 
+                '<?xml version="1.0" ?>'
+                '<robot name="new_robot_urdf">'
+                '<!-- Your URDF content will be loaded from file -->'
+                '</robot>',
+            'use_sim_time': False
+        }]
+    )
+    
+    # Teleop keyboard (start after a delay to ensure bridge is ready)
+    teleop_node = Node(
+        package='teleop_twist_keyboard',
+        executable='teleop_twist_keyboard',
+        name='teleop_keyboard',
+        output='screen',
+        prefix='xterm -e'  # Opens in new terminal window
+    )
+    
+    # Delay teleop start until after bridge is running
+    delayed_teleop = TimerAction(
+        period=3.0,  # Wait 3 seconds
+        actions=[teleop_node]
+    )
+    
+    return LaunchDescription([
+        arduino_bridge,
+        robot_state_publisher,
+        delayed_teleop,
+    ])
+from launch import LaunchDescription
+from launch_ros.actions import Node
+from launch.substitutions import PathJoinSubstitution
+from launch_ros.substitutions import FindPackageShare
+
+def generate_launch_description():
+    # Path to the SLAM Toolbox configuration
+    slam_params_file = PathJoinSubstitution([
+        FindPackageShare('ros_arduino_bridge'),
+        'config',
+        'mapper_params_online_async.yaml'
+    ])
+
+    # Throttle the LiDAR data
+    throttle_node = Node(
+        package='ros_arduino_bridge',
+        executable='scan_throttle',
+        name='scan_throttle',
+        output='screen'
+    )
+
+    # SLAM Toolbox node
+    slam_toolbox_node = Node(
+        package='slam_toolbox',
+        executable='async_slam_toolbox_node',
+        name='slam_toolbox',
+        output='screen',
+        parameters=[slam_params_file, {'use_sim_time': False}]
+    )
+
+    # Return the launch description
+    return LaunchDescription([
+        throttle_node,
+        slam_toolbox_node
+    ])
+from launch import LaunchDescription
+from launch_ros.actions import Node
+from launch.substitutions import PathJoinSubstitution, Command
+from launch_ros.substitutions import FindPackageShare
+from launch.actions import DeclareLaunchArgument
+from launch.substitutions import LaunchConfiguration
+from launch.conditions import IfCondition
+
+def generate_launch_description():
+    # Launch arguments with defaults
+    serial_port = LaunchConfiguration('serial_port', default='/dev/ttyUSB0')
+    use_rviz = LaunchConfiguration('use_rviz', default='true')
+    urdf_file = LaunchConfiguration('urdf_file', default='new_robot_urdf.xacro')
+    
+    # Paths to package resources
+    urdf_path = PathJoinSubstitution([
+        FindPackageShare('ros_arduino_bridge'),
+        'urdf',
+        urdf_file
+    ])
+    
+    rviz_config_path = PathJoinSubstitution([
+        FindPackageShare('ros_arduino_bridge'),
+        'config',
+        'view_robot.rviz'
+    ])
+    
+    # Robot State Publisher Node
+    robot_state_publisher = Node(
+        package='robot_state_publisher',
+        executable='robot_state_publisher',
+        name='robot_state_publisher',
+        output='screen',
+        parameters=[{
+            'robot_description': Command(['xacro ', urdf_path]),
+            'use_sim_time': False
+        }]
+    )
+    
+    # ROS Arduino Bridge Node
+    arduino_bridge = Node(
+        package='ros_arduino_bridge',
+        executable='ros_arduino_bridge',
+        name='ros_arduino_bridge',
+        output='screen',
+        parameters=[{
+            'serial_port': serial_port,
+            'baud_rate': 57600,
+            'base_width': 0.215446,
+            'wheel_radius': 0.085,
+            'encoder_ticks_per_rev': 44
+        }]
+    )
+    
+    # RViz2 Node
+    rviz_node = Node(
+        package='rviz2',
+        executable='rviz2',
+        name='rviz2',
+        output='screen',
+        arguments=['-d', rviz_config_path],
+        condition=IfCondition(use_rviz)
+    )
+    
+    return LaunchDescription([
+        DeclareLaunchArgument('serial_port', default_value=serial_port,
+                             description='Serial port for Arduino'),
+        DeclareLaunchArgument('use_rviz', default_value=use_rviz,
+                             description='Launch RViz2 for visualization'),
+        DeclareLaunchArgument('urdf_file', default_value=urdf_file,
+                             description='URDF/XACRO file name'),
+        
+        robot_state_publisher,
+        arduino_bridge,
+        rviz_node,
+    ])
+from launch_ros.actions import Node
+from launch import LaunchDescription
+from launch.actions import DeclareLaunchArgument
+from launch.substitutions import LaunchConfiguration
+from launch.conditions import IfCondition, UnlessCondition
+import xacro
+import os
+from ament_index_python.packages import get_package_share_directory
+
+def generate_launch_description():
+    # Get the package share directory
+    share_dir = get_package_share_directory('ros_arduino_bridge')
+
+    # Path to the URDF file
+    xacro_file = os.path.join(share_dir, 'urdf', 'new_robot_urdf.xacro')
+
+    # Process the xacro file to get the robot description
+    robot_description_config = xacro.process_file(xacro_file)
+    robot_urdf = robot_description_config.toxml()
+
+    # Path to the RViz configuration file
+    rviz_config_file = os.path.join(share_dir, 'config', 'view_robot.rviz')
+
+    # Declare launch arguments
+    gui_arg = DeclareLaunchArgument(
+        name='gui',
+        default_value='True',
+        description='Flag to enable joint_state_publisher_gui'
+    )
+    publish_state_arg = DeclareLaunchArgument(
+        name='publish_state',
+        default_value='True',
+        description='Flag to enable publishing the robot state'
+    )
+
+    # Launch configurations
+    show_gui = LaunchConfiguration('gui')
+    publish_state = LaunchConfiguration('publish_state')
+
+    # Robot state publisher node
+    robot_state_publisher_node = Node(
+        condition=IfCondition(publish_state),
+        package='robot_state_publisher',
+        executable='robot_state_publisher',
+        parameters=[{'robot_description': robot_urdf}]
+    )
+
+    # Joint state publisher node (non-GUI version)
+    joint_state_publisher_node = Node(
+        condition=UnlessCondition(show_gui),
+        package='joint_state_publisher',
+        executable='joint_state_publisher',
+    )
+
+    # Joint state publisher GUI node
+    joint_state_publisher_gui_node = Node(
+        condition=IfCondition(show_gui),
+        package='joint_state_publisher_gui',
+        executable='joint_state_publisher_gui',
+    )
+
+    # RViz node
+    rviz_node = Node(
+        package='rviz2',
+        executable='rviz2',
+        name='rviz2',
+        arguments=['-d', rviz_config_file],
+        output='screen'
+    )
+
+    # Return the launch description
+    return LaunchDescription([
+        gui_arg,
+        publish_state_arg,
+        robot_state_publisher_node,
+        joint_state_publisher_node,
+        joint_state_publisher_gui_node,
+        rviz_node
+    ])

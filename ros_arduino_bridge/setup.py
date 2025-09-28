@@ -28,6 +28,8 @@ setup(
     entry_points={
         'console_scripts': [
             'ros_arduino_bridge = ros_arduino_bridge.ros_arduino_bridge:main',
+            'scan_throttle = ros_arduino_bridge.scan_throttle:main',
         ],
     },
 )
+

@@ -27,7 +27,7 @@ Visualization Manager:
         Z: 0
       Plane: XY
       Plane Cell Count: 10
-      Reference Frame: base_link  # Changed from odom to base_link
+      Reference Frame: base_link
       Value: true
     - Class: rviz_default_plugins/RobotModel
       Description Topic:
@@ -35,7 +35,7 @@ Visualization Manager:
         Durability Policy: Volatile
         History Policy: Keep Last
         Reliability Policy: Reliable
-        Value: /robot_description  # Changed to robot_description topic
+        Value: /robot_description
       Enabled: true
       Links:
         All Links Enabled: true
@@ -48,6 +48,23 @@ Visualization Manager:
       Value: true
       Visual Enabled: true
       Collision Enabled: false
+    - Alpha: 0.7
+      Class: rviz_default_plugins/LaserScan
+      Color: 255; 0; 0
+      Enabled: true
+      Name: LaserScan
+      Queue Size: 10
+      Style: Points
+      Topic: /scan
+      Value: true
+    - Alpha: 0.7
+      Class: rviz_default_plugins/Map
+      Color Scheme: map
+      Draw Behind: false
+      Enabled: true
+      Name: Map
+      Topic: /map
+      Value: true
     - Class: rviz_default_plugins/TF
       Enabled: true
       Frame Timeout: 15
@@ -58,14 +75,13 @@ Visualization Manager:
       Show Arrows: true
       Show Axes: true
       Show Names: true
-      Tree:
-        {}
+      Tree: {}
       Update Interval: 0
       Value: true
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48
-    Fixed Frame: base_link  # Changed from odom to base_link
+    Fixed Frame: base_link
     Frame Rate: 30
   Name: root
   Tools:
@@ -76,14 +92,14 @@ Visualization Manager:
     - Class: rviz_default_plugins/FocusCamera
     - Class: rviz_default_plugins/Measure
       Line color: 128; 128; 0
-    - Class: rviz_default_plugins/2D Pose Estimate
+    - Class: nav2_rviz_plugins/SetInitialPose
       Topic:
         Depth: 5
         Durability Policy: Volatile
         History Policy: Keep Last
         Reliability Policy: Reliable
         Value: /initialpose
-    - Class: rviz_default_plugins/2D Nav Goal
+    - Class: nav2_rviz_plugins/GoalTool
       Topic:
         Depth: 5
         Durability Policy: Volatile
