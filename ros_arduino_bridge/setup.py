@@ -14,9 +14,13 @@ setup(
         ('share/' + package_name, ['package.xml']),
         (os.path.join('share', package_name, 'launch'), glob('launch/*.py')),
         (os.path.join('share', package_name, 'config'), glob('config/*.yaml')),
-        (os.path.join('share', package_name, 'config'), glob('config/*.rviz')),  # ADD THIS
-        (os.path.join('share', package_name, 'urdf'), glob('urdf/*')),          # ADD THIS
-        (os.path.join('share', package_name, 'meshes'), glob('meshes/*')),      # ADD THIS
+        (os.path.join('share', package_name, 'config'), glob('config/*.rviz')),
+        (os.path.join('share', package_name, 'urdf'), glob('urdf/*')),
+        (os.path.join('share', package_name, 'meshes'), glob('meshes/*')),
+        # Deployment folders for distributed computing
+        (os.path.join('share', package_name, 'deployment/laptop'), glob('deployment/laptop/*')),
+        (os.path.join('share', package_name, 'deployment/pi'), glob('deployment/pi/*')),
+        (os.path.join('share', package_name, 'deployment/shared'), glob('deployment/shared/*')),
     ],
     install_requires=['setuptools', 'pyserial'],
     zip_safe=True,
