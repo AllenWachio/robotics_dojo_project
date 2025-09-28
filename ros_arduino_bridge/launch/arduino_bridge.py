@@ -46,8 +46,8 @@ def generate_launch_description():
         parameters=[{
             'serial_port': serial_port,
             'baud_rate': 57600,
-            'base_width': 0.215446,
-            'wheel_radius': 0.085,
+            'base_width': 0.208000,
+            'wheel_radius': 0.042500,
             'encoder_ticks_per_rev': 44,
             'max_linear_speed': 0.5,
             'max_angular_speed': 1.0
