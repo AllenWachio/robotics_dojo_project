@@ -1,6 +1,6 @@
 from launch import LaunchDescription
 from launch_ros.actions import Node
-from launch.substitutions import PathJoinSubstitution
+from launch.substitutions import PathJoinSubstitution, Command
 from launch_ros.substitutions import FindPackageShare
 
 def generate_launch_description():
@@ -11,15 +11,41 @@ def generate_launch_description():
         'mapper_params_online_async.yaml'
     ])
 
-    # Throttle the LiDAR data
-    throttle_node = Node(
-        package='ros_arduino_bridge',
-        executable='scan_throttle',
-        name='scan_throttle',
-        output='screen'
+    # Path to robot URDF
+    urdf_path = PathJoinSubstitution([
+        FindPackageShare('ros_arduino_bridge'),
+        'urdf',
+        'new_robot_urdf.xacro'
+    ])
+
+    # Robot State Publisher (needed for TF tree)
+    robot_state_publisher = Node(
+        package='robot_state_publisher',
+        executable='robot_state_publisher',
+        name='robot_state_publisher',
+        output='screen',
+        parameters=[{
+            'robot_description': Command(['xacro ', urdf_path]),
+            'use_sim_time': False
+        }]
     )
 
-    # SLAM Toolbox node
+    # Arduino Bridge (for odometry and tf)
+    arduino_bridge = Node(
+        package='ros_arduino_bridge',
+        executable='ros_arduino_bridge',
+        name='ros_arduino_bridge',
+        output='screen',
+        parameters=[{
+            'serial_port': '/dev/ttyUSB0',
+            'baud_rate': 57600,
+            'base_width': 0.215446,
+            'wheel_radius': 0.085,
+            'encoder_ticks_per_rev': 44
+        }]
+    )
+
+    # SLAM Toolbox node (no scan throttling needed - SLAM can handle full rate)
     slam_toolbox_node = Node(
         package='slam_toolbox',
         executable='async_slam_toolbox_node',
@@ -30,6 +56,7 @@ def generate_launch_description():
 
     # Return the launch description
     return LaunchDescription([
-        throttle_node,
+        robot_state_publisher,
+        arduino_bridge,
         slam_toolbox_node
     ])

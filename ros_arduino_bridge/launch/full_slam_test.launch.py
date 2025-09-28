@@ -2,21 +2,26 @@ from launch import LaunchDescription
 from launch_ros.actions import Node
 from launch.substitutions import PathJoinSubstitution, Command
 from launch_ros.substitutions import FindPackageShare
-from launch.actions import DeclareLaunchArgument
+from launch.actions import DeclareLaunchArgument, TimerAction
 from launch.substitutions import LaunchConfiguration
 from launch.conditions import IfCondition
 
 def generate_launch_description():
-    # Launch arguments with defaults
+    # Launch arguments
     serial_port = LaunchConfiguration('serial_port', default='/dev/ttyUSB0')
     use_rviz = LaunchConfiguration('use_rviz', default='true')
-    urdf_file = LaunchConfiguration('urdf_file', default='new_robot_urdf.xacro')
     
-    # Paths to package resources
+    # Paths to configuration files
+    slam_params_file = PathJoinSubstitution([
+        FindPackageShare('ros_arduino_bridge'),
+        'config',
+        'mapper_params_online_async.yaml'
+    ])
+    
     urdf_path = PathJoinSubstitution([
         FindPackageShare('ros_arduino_bridge'),
         'urdf',
-        urdf_file
+        'new_robot_urdf.xacro'
     ])
     
     rviz_config_path = PathJoinSubstitution([
@@ -24,8 +29,8 @@ def generate_launch_description():
         'config',
         'view_robot.rviz'
     ])
-    
-    # Robot State Publisher Node
+
+    # Robot State Publisher
     robot_state_publisher = Node(
         package='robot_state_publisher',
         executable='robot_state_publisher',
@@ -36,8 +41,8 @@ def generate_launch_description():
             'use_sim_time': False
         }]
     )
-    
-    # ROS Arduino Bridge Node (handles joint states internally)
+
+    # Arduino Bridge Node
     arduino_bridge = Node(
         package='ros_arduino_bridge',
         executable='ros_arduino_bridge',
@@ -53,8 +58,26 @@ def generate_launch_description():
             'max_angular_speed': 1.0
         }]
     )
-    
-    # RViz2 Node
+
+    # SLAM Toolbox Node
+    slam_toolbox_node = Node(
+        package='slam_toolbox',
+        executable='async_slam_toolbox_node',
+        name='slam_toolbox',
+        output='screen',
+        parameters=[slam_params_file, {'use_sim_time': False}]
+    )
+
+    # Teleop Node for testing
+    teleop_node = Node(
+        package='teleop_twist_keyboard',
+        executable='teleop_twist_keyboard',
+        name='teleop_keyboard',
+        output='screen',
+        prefix='xterm -e'
+    )
+
+    # RViz Node
     rviz_node = Node(
         package='rviz2',
         executable='rviz2',
@@ -63,16 +86,27 @@ def generate_launch_description():
         arguments=['-d', rviz_config_path],
         condition=IfCondition(use_rviz)
     )
+
+    # Delay teleop and rviz to ensure other nodes are ready
+    delayed_teleop = TimerAction(
+        period=3.0,
+        actions=[teleop_node]
+    )
     
+    delayed_rviz = TimerAction(
+        period=2.0,
+        actions=[rviz_node]
+    )
+
     return LaunchDescription([
         DeclareLaunchArgument('serial_port', default_value=serial_port,
                              description='Serial port for Arduino'),
         DeclareLaunchArgument('use_rviz', default_value=use_rviz,
                              description='Launch RViz2 for visualization'),
-        DeclareLaunchArgument('urdf_file', default_value=urdf_file,
-                             description='URDF/XACRO file name'),
         
         robot_state_publisher,
         arduino_bridge,
-        rviz_node,
+        slam_toolbox_node,
+        delayed_rviz,
+        delayed_teleop,
     ])

@@ -24,8 +24,8 @@ def generate_launch_description():
     # Declare launch arguments
     gui_arg = DeclareLaunchArgument(
         name='gui',
-        default_value='True',
-        description='Flag to enable joint_state_publisher_gui'
+        default_value='False',  # Changed default to False since arduino bridge provides joint states
+        description='Flag to enable joint_state_publisher_gui for manual control'
     )
     publish_state_arg = DeclareLaunchArgument(
         name='publish_state',
@@ -42,22 +42,11 @@ def generate_launch_description():
         condition=IfCondition(publish_state),
         package='robot_state_publisher',
         executable='robot_state_publisher',
-        parameters=[{'robot_description': robot_urdf}]
+        parameters=[{'robot_description': robot_urdf, 'use_sim_time': False}]
     )
 
-    # Joint state publisher node (non-GUI version)
-    joint_state_publisher_node = Node(
-        condition=UnlessCondition(show_gui),
-        package='joint_state_publisher',
-        executable='joint_state_publisher',
-    )
-
-    # Joint state publisher GUI node
-    joint_state_publisher_gui_node = Node(
-        condition=IfCondition(show_gui),
-        package='joint_state_publisher_gui',
-        executable='joint_state_publisher_gui',
-    )
+    # Joint state publisher GUI node (only when explicitly requested)
+    # Note: This will conflict with arduino bridge if both are running
 
     # RViz node
     rviz_node = Node(
@@ -73,7 +62,5 @@ def generate_launch_description():
         gui_arg,
         publish_state_arg,
         robot_state_publisher_node,
-        joint_state_publisher_node,
-        joint_state_publisher_gui_node,
         rviz_node
     ])
