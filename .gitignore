@@ -2,6 +2,7 @@
 .vscode/browse.vc.db
 .vscode/*.db
 .vscode/cmake/
+.vscode
 
 # Build and Install directories
 build/
