@@ -1,0 +1,13 @@
+# VS Code configuration and cache files
+.vscode/browse.vc.db
+.vscode/*.db
+.vscode/cmake/
+
+# Build and Install directories
+build/
+install/
+log/
+
+
+
+
