@@ -78,7 +78,8 @@ def generate_launch_description():
             'frame_id': 'laser',
             'inverted': False,
             'angle_compensate': True,
-            'scan_mode': 'Sensitivity',
+            'scan_mode': 'Sensitivity', 
+            'auto_reconnect': True,   # Added for better reliability
         }],
         output='screen'
     )

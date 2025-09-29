@@ -70,6 +70,31 @@ echo "   Available ROS2 packages:"
 ros2 pkg list | grep -E "(arduino|bridge|sllidar)" || echo "   No relevant packages found"
 echo ""
 
+# Test LiDAR communication
+echo "6. Testing LiDAR communication..."
+if [ -e /dev/ttyUSB1 ]; then
+    echo "   Testing LiDAR connection on /dev/ttyUSB1..."
+    # Quick test to see if device responds
+    timeout 3s python3 -c "
+import serial
+import time
+try:
+    ser = serial.Serial('/dev/ttyUSB1', 115200, timeout=1)
+    print('   ✓ LiDAR device opens successfully')
+    ser.close()
+except Exception as e:
+    print(f'   ✗ LiDAR connection failed: {e}')
+" 2>/dev/null || echo "   ⚠ LiDAR test skipped (no python3/serial)"
+else
+    echo "   ✗ No LiDAR device found at /dev/ttyUSB1"
+fi
+echo ""
+
 echo "Setup check complete!"
 echo ""
 echo "If everything looks good, run: ./01_hardware_interface.sh"
+echo ""
+echo "If LiDAR fails to start, try:"
+echo "  - Check device permissions: ls -la /dev/ttyUSB1"
+echo "  - Power cycle the LiDAR"
+echo "  - Try different USB port"
