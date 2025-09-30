@@ -114,6 +114,8 @@ cd ~/ros2_ws/src/ros_arduino_bridge/deployment/scripts/laptop
 5. **Save map (on laptop):**
    ```bash
    ./03_save_map.sh
+   # Enter a unique name for your map when prompted
+   # Script will check if name already exists and ask for different name if needed
    ```
 
 ### **Phase 3: Navigation (Use Map)**
@@ -133,7 +135,8 @@ cd ~/ros2_ws/src/ros_arduino_bridge/deployment/scripts/laptop
 3. **Laptop:**
 
    ```bash
-   ./02_navigation_mode.sh
+   ./02_navigation_mode.sh [map_name]
+   # OR just ./02_navigation_mode.sh and choose from available maps
    ```
 
 4. **Set goals in RViz**

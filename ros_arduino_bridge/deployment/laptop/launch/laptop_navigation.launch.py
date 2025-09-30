@@ -20,12 +20,13 @@ def generate_launch_description():
     
     Prerequisites: 
     1. Robot must be running (Pi hardware interface)
-    2. Saved map must exist in saved_maps directory
+    2. Saved map must exist in ~/ros2_ws/maps/ directory
     3. Robot should be localized on the map
     """
     
     # Launch arguments
     map_file = LaunchConfiguration('map_file', default='robot_map.yaml')
+    map_path = LaunchConfiguration('map_path', default='~/ros2_ws/maps/')
     use_rviz = LaunchConfiguration('use_rviz', default='true')
     autostart = LaunchConfiguration('autostart', default='true')
     use_sim_time = LaunchConfiguration('use_sim_time', default='false')
@@ -33,17 +34,17 @@ def generate_launch_description():
     # Configuration file paths
     nav2_params_file = PathJoinSubstitution([
         FindPackageShare('ros_arduino_bridge'),
-        'deployment', 'laptop', 'nav2_params.yaml'
+        'deployment', 'laptop', 'config', 'nav2_params.yaml'
     ])
     
     rviz_config_path = PathJoinSubstitution([
         FindPackageShare('ros_arduino_bridge'),
-        'deployment', 'laptop', 'navigation_rviz_config.rviz'
+        'deployment', 'laptop', 'config', 'navigation_rviz_config.rviz'
     ])
     
+    # Use the user's maps directory instead of package directory
     map_file_path = PathJoinSubstitution([
-        FindPackageShare('ros_arduino_bridge'),
-        'deployment', 'laptop', 'saved_maps', map_file
+        map_path, map_file
     ])
 
     # Rewrite the nav2 params file to include dynamic values
@@ -186,7 +187,9 @@ def generate_launch_description():
     return LaunchDescription([
         # Launch arguments
         DeclareLaunchArgument('map_file', default_value=map_file,
-                             description='Map file name in saved_maps directory'),
+                             description='Map file name (e.g., my_map.yaml)'),
+        DeclareLaunchArgument('map_path', default_value=map_path,
+                             description='Directory path where maps are stored'),
         DeclareLaunchArgument('use_rviz', default_value=use_rviz,
                              description='Launch RViz2 with navigation interface'),
         DeclareLaunchArgument('autostart', default_value=autostart,

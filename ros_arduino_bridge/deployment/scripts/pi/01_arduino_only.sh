@@ -45,7 +45,7 @@ if [ $? -eq 0 ]; then
     echo ""
     echo "Starting Arduino bridge nodes..."
     
-    # Launch only Arduino components
+    # Launch only Arduino components using package launch file
     ros2 launch ros_arduino_bridge arduino_only.launch.py arduino_port:=${ARDUINO_PORT:-/dev/ttyUSB0}
     
 else

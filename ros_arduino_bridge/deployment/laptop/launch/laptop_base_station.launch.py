@@ -29,12 +29,12 @@ def generate_launch_description():
     # Configuration file paths
     slam_params_file = PathJoinSubstitution([
         FindPackageShare('ros_arduino_bridge'),
-        'deployment', 'laptop', 'slam_config_laptop.yaml'
+        'deployment', 'laptop', 'config', 'slam_config_laptop.yaml'
     ])
     
     rviz_config_path = PathJoinSubstitution([
         FindPackageShare('ros_arduino_bridge'),
-        'deployment', 'laptop', 'laptop_rviz_config.rviz'
+        'deployment', 'laptop', 'config', 'laptop_rviz_config.rviz'
     ])
 
     # SLAM Toolbox - Full processing power on laptop
@@ -86,10 +86,9 @@ def generate_launch_description():
         output='screen',
         parameters=[{
             'use_sim_time': False,
-            'yaml_filename': PathJoinSubstitution([
-                FindPackageShare('ros_arduino_bridge'),
-                'deployment', 'laptop', 'saved_maps', 'robot_map.yaml'
-            ])
+            # Note: Maps are now saved to ~/ros2_ws/maps/ by user scripts
+            # This launch file is for mapping mode, not navigation mode
+            'yaml_filename': '/tmp/placeholder_map.yaml'
         }],
         condition=IfCondition(save_maps)
     )
