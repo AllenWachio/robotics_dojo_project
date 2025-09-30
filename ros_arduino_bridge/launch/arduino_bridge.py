@@ -7,8 +7,8 @@ from launch.substitutions import LaunchConfiguration
 from launch.conditions import IfCondition
 
 def generate_launch_description():
-    # Launch arguments with defaults
-    serial_port = LaunchConfiguration('serial_port', default='/dev/ttyUSB0')
+    # Launch arguments with defaults - using device ID for Arduino
+    serial_port = LaunchConfiguration('serial_port', default='/dev/serial/by-id/usb-1a86_USB_Serial-if00-port0')
     use_rviz = LaunchConfiguration('use_rviz', default='true')
     urdf_file = LaunchConfiguration('urdf_file', default='new_robot_urdf.xacro')
     
@@ -66,7 +66,7 @@ def generate_launch_description():
     
     return LaunchDescription([
         DeclareLaunchArgument('serial_port', default_value=serial_port,
-                             description='Serial port for Arduino'),
+                             description='Serial port for Arduino (device ID)'),
         DeclareLaunchArgument('use_rviz', default_value=use_rviz,
                              description='Launch RViz2 for visualization'),
         DeclareLaunchArgument('urdf_file', default_value=urdf_file,

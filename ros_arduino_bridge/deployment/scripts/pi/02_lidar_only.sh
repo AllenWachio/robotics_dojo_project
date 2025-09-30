@@ -15,34 +15,29 @@ source ~/ros2_ws/install/setup.bash
 # Check LiDAR device and permissions
 echo "Checking LiDAR connection..."
 
-lidar_port=""
-if [ -e /dev/ttyUSB1 ]; then
-    echo "   ✓ Found device at /dev/ttyUSB1"
-    if [ -w /dev/ttyUSB1 ]; then
+# Use device ID approach for consistent device identification
+lidar_port="/dev/serial/by-id/usb-Silicon_Labs_CP2102_USB_to_UART_Bridge_Controller_0001-if00-port0"
+
+if [ -e "$lidar_port" ]; then
+    echo "   ✓ Found LiDAR device via device ID"
+    if [ -w "$lidar_port" ]; then
         echo "   ✓ Write access confirmed"
-        lidar_port="/dev/ttyUSB1"
     else
-        echo "   ⚠ No write access to /dev/ttyUSB1"
+        echo "   ⚠ No write access to device"
         echo "   Trying to fix permissions..."
-        sudo chmod 666 /dev/ttyUSB1
-        if [ -w /dev/ttyUSB1 ]; then
+        sudo chmod 666 "$lidar_port"
+        if [ -w "$lidar_port" ]; then
             echo "   ✓ Permissions fixed"
-            lidar_port="/dev/ttyUSB1"
         else
             echo "   ✗ Still no write access"
+            exit 1
         fi
     fi
-elif [ -e /dev/ttyUSB0 ]; then
-    echo "   Checking /dev/ttyUSB0..."
-    if [ -w /dev/ttyUSB0 ]; then
-        echo "   ✓ Found LiDAR at /dev/ttyUSB0"
-        lidar_port="/dev/ttyUSB0"
-    fi
-fi
-
-if [ -z "$lidar_port" ]; then
-    echo "   ✗ No accessible LiDAR device found"
-    echo "   Available devices:"
+else
+    echo "   ✗ LiDAR device not found at expected device ID"
+    echo "   Available serial devices:"
+    ls -la /dev/serial/by-id/ 2>/dev/null || echo "   No /dev/serial/by-id/ devices"
+    echo "   Available USB devices:"
     ls -la /dev/ttyUSB* 2>/dev/null || echo "   No /dev/ttyUSB* devices"
     exit 1
 fi

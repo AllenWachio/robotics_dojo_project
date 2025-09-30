@@ -21,7 +21,7 @@ echo "2. Checking workspace build..."
 if [ -f ~/ros2_ws/install/setup.bash ]; then
     echo "   ✓ Workspace appears to be built"
 else
-    echo "   ✗ Workspace not built - run 'colcon build' in ~/ros2_ws"
+    echo "   ✗ Workspace not built - please build the workspace in ~/ros2_ws"
 fi
 echo ""
 

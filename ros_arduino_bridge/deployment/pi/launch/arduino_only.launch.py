@@ -16,8 +16,8 @@ def generate_launch_description():
     LiDAR is launched separately to avoid conflicts
     """
     
-    # Launch arguments
-    arduino_port = LaunchConfiguration('arduino_port', default='/dev/ttyUSB0')
+    # Launch arguments - using device ID for consistent identification
+    arduino_port = LaunchConfiguration('arduino_port', default='/dev/serial/by-id/usb-1a86_USB_Serial-if00-port0')
     
     # Robot description path
     urdf_path = PathJoinSubstitution([
@@ -62,7 +62,7 @@ def generate_launch_description():
 
     return LaunchDescription([
         DeclareLaunchArgument('arduino_port', default_value=arduino_port,
-                             description='Arduino serial port'),
+                             description='Arduino serial port (device ID)'),
         
         robot_state_publisher,
         arduino_bridge,

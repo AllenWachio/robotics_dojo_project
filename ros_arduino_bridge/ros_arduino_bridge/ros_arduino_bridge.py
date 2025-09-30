@@ -20,10 +20,10 @@ class ROSArduinoBridge(Node):
         super().__init__("ros_arduino_bridge")
 
         # Parameters
-        self.declare_parameter("serial_port", "/dev/ttyUSB0")
+        self.declare_parameter("serial_port", "/dev/serial/by-id/usb-1a86_USB_Serial-if00-port0")
         self.declare_parameter("baud_rate", 57600)
-        self.declare_parameter("base_width", 0.3)  # Distance between left/right wheels
-        self.declare_parameter("wheel_radius", 0.075)  # Wheel radius in meters
+        self.declare_parameter("base_width", 0.208000)  # Distance between left/right wheels
+        self.declare_parameter("wheel_radius", 0.042500)  # Wheel radius in meters
         self.declare_parameter(
             "encoder_ticks_per_rev", 44
         )  # Encoder ticks per revolution

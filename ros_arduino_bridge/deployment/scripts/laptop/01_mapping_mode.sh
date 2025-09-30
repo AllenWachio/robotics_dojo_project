@@ -12,17 +12,7 @@ echo ""
 source /opt/ros/humble/setup.bash
 source ~/ros2_ws/install/setup.bash
 
-# Build the workspace first
-echo "Building workspace..."
-cd ~/ros2_ws
-colcon build --packages-select ros_arduino_bridge
+echo "Starting mapping..."
 
-if [ $? -eq 0 ]; then
-    echo "Build successful! Starting mapping..."
-    source ~/ros2_ws/install/setup.bash
-    
-    # Launch mapping on laptop
-    ros2 launch ros_arduino_bridge laptop_base_station.launch.py
-else
-    echo "Build failed! Please fix errors before running."
-fi
+# Launch mapping on laptop
+ros2 launch ros_arduino_bridge laptop_base_station.launch.py

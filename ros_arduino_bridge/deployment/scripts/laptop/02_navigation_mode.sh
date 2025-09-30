@@ -63,17 +63,7 @@ echo ""
 source /opt/ros/humble/setup.bash
 source ~/ros2_ws/install/setup.bash
 
-# Build the workspace first
-echo "Building workspace..."
-cd ~/ros2_ws
-colcon build --packages-select ros_arduino_bridge
+echo "Starting navigation..."
 
-if [ $? -eq 0 ]; then
-    echo "Build successful! Starting navigation..."
-    source ~/ros2_ws/install/setup.bash
-    
-    # Launch navigation on laptop with specified map
-    ros2 launch ros_arduino_bridge laptop_navigation.launch.py map_file:=${map_name}.yaml map_path:=~/ros2_ws/maps/
-else
-    echo "Build failed! Please fix errors before running."
-fi
+# Launch navigation on laptop with specified map
+ros2 launch ros_arduino_bridge laptop_navigation.launch.py map_file:=${map_name}.yaml map_path:=~/ros2_ws/maps/

@@ -24,7 +24,7 @@ if [ -d ~/ros2_ws ]; then
     if [ -f ~/ros2_ws/install/setup.bash ]; then
         echo "   ✓ Workspace is built"
     else
-        echo "   ✗ Workspace not built - run 'colcon build'"
+        echo "   ✗ Workspace not built - please build the workspace"
     fi
 else
     echo "   ✗ Workspace directory not found"
@@ -37,14 +37,19 @@ echo "   Available USB devices:"
 ls -la /dev/ttyUSB* 2>/dev/null || echo "   No USB devices found"
 echo ""
 
-if [ -e /dev/ttyUSB0 ]; then
-    echo "   Device permissions for /dev/ttyUSB0:"
-    ls -la /dev/ttyUSB0
+# Device permissions are checked above using device IDs
+
+lidar_device_id="/dev/serial/by-id/usb-Silicon_Labs_CP2102_USB_to_UART_Bridge_Controller_0001-if00-port0"
+arduino_device_id="/dev/serial/by-id/usb-1a86_USB_Serial-if00-port0"
+
+if [ -e "$arduino_device_id" ]; then
+    echo "   Device permissions for Arduino (via device ID):"
+    ls -la "$arduino_device_id"
 fi
 
-if [ -e /dev/ttyUSB1 ]; then
-    echo "   Device permissions for /dev/ttyUSB1:"
-    ls -la /dev/ttyUSB1
+if [ -e "$lidar_device_id" ]; then
+    echo "   Device permissions for LiDAR (via device ID):"
+    ls -la "$lidar_device_id"
 fi
 echo ""
 
@@ -72,21 +77,24 @@ echo ""
 
 # Test LiDAR communication
 echo "6. Testing LiDAR communication..."
-if [ -e /dev/ttyUSB1 ]; then
-    echo "   Testing LiDAR connection on /dev/ttyUSB1..."
+lidar_device="/dev/serial/by-id/usb-Silicon_Labs_CP2102_USB_to_UART_Bridge_Controller_0001-if00-port0"
+if [ -e "$lidar_device" ]; then
+    echo "   Testing LiDAR connection via device ID..."
     # Quick test to see if device responds
     timeout 3s python3 -c "
 import serial
 import time
 try:
-    ser = serial.Serial('/dev/ttyUSB1', 115200, timeout=1)
+    ser = serial.Serial('$lidar_device', 115200, timeout=1)
     print('   ✓ LiDAR device opens successfully')
     ser.close()
 except Exception as e:
     print(f'   ✗ LiDAR connection failed: {e}')
 " 2>/dev/null || echo "   ⚠ LiDAR test skipped (no python3/serial)"
 else
-    echo "   ✗ No LiDAR device found at /dev/ttyUSB1"
+    echo "   ✗ No LiDAR device found at expected device ID"
+    echo "   Available serial devices:"
+    ls -la /dev/serial/by-id/ 2>/dev/null || echo "   No /dev/serial/by-id/ devices"
 fi
 echo ""
 
@@ -95,6 +103,6 @@ echo ""
 echo "If everything looks good, run: ./01_hardware_interface.sh"
 echo ""
 echo "If LiDAR fails to start, try:"
-echo "  - Check device permissions: ls -la /dev/ttyUSB1"
+echo "  - Check device permissions: ls -la /dev/serial/by-id/usb-Silicon_Labs_CP2102_USB_to_UART_Bridge_Controller_0001-if00-port0"
 echo "  - Power cycle the LiDAR"
 echo "  - Try different USB port"

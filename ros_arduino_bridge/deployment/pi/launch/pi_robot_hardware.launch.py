@@ -18,8 +18,8 @@ def generate_launch_description():
     Publishes topics that laptop automatically discovers over network
     """
     
-    # Launch arguments
-    arduino_port = LaunchConfiguration('arduino_port', default='/dev/ttyUSB0')
+    # Launch arguments - using device ID for consistent device identification
+    arduino_port = LaunchConfiguration('arduino_port', default='/dev/serial/by-id/usb-1a86_USB_Serial-if00-port0')
     
     # Robot description path
     urdf_path = PathJoinSubstitution([
@@ -73,7 +73,7 @@ def generate_launch_description():
         name='sllidar_node',
         parameters=[{
             'channel_type': 'serial',
-            'serial_port': '/dev/ttyUSB1',  # Usually USB1 for LiDAR, USB0 for Arduino
+            'serial_port': '/dev/serial/by-id/usb-Silicon_Labs_CP2102_USB_to_UART_Bridge_Controller_0001-if00-port0',  # Device ID approach (more reliable than ttyUSB)
             'serial_baudrate': 115200,
             'frame_id': 'laser',
             'inverted': False,
@@ -86,7 +86,7 @@ def generate_launch_description():
 
     return LaunchDescription([
         DeclareLaunchArgument('arduino_port', default_value=arduino_port,
-                             description='Arduino serial port'),
+                             description='Arduino serial port (device ID)'),
         
         robot_state_publisher,
         arduino_bridge,

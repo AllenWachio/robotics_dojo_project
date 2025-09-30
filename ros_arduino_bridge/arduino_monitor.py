@@ -13,11 +13,11 @@ import select
 def arduino_monitor():
     try:
         # Connect to Arduino
-        ser = serial.Serial('/dev/ttyUSB0', 57600, timeout=0.1)
+        ser = serial.Serial('/dev/serial/by-id/usb-1a86_USB_Serial-if00-port0', 57600, timeout=0.1)
         time.sleep(2)  # Wait for Arduino to initialize
         
         print("=== Arduino Serial Monitor ===")
-        print("Connected to /dev/ttyUSB0 at 57600 baud")
+        print("Connected to Arduino via device ID at 57600 baud")
         print("Commands you can try:")
         print("  e  - Request encoder values")
         print("  r  - Reset encoders")

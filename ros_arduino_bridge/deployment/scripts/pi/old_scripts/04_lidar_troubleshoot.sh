@@ -9,11 +9,14 @@ echo ""
 
 # Check if LiDAR device exists
 echo "1. Checking LiDAR device..."
-if [ -e /dev/ttyUSB1 ]; then
-    echo "   ✓ LiDAR device found at /dev/ttyUSB1"
-    ls -la /dev/ttyUSB1
+lidar_device="/dev/serial/by-id/usb-Silicon_Labs_CP2102_USB_to_UART_Bridge_Controller_0001-if00-port0"
+if [ -e "$lidar_device" ]; then
+    echo "   ✓ LiDAR device found via device ID"
+    ls -la "$lidar_device"
 else
-    echo "   ✗ No LiDAR device at /dev/ttyUSB1"
+    echo "   ✗ No LiDAR device at expected device ID"
+    echo "   Available serial devices:"
+    ls -la /dev/serial/by-id/ 2>/dev/null || echo "   No /dev/serial/by-id/ devices"
     echo "   Available USB devices:"
     ls -la /dev/ttyUSB* 2>/dev/null || echo "   No USB devices found"
 fi
@@ -53,14 +56,14 @@ echo ""
 
 # Test basic serial communication
 echo "5. Testing basic serial communication..."
-if [ -e /dev/ttyUSB1 ] && command -v python3 &> /dev/null; then
+if [ -e "$lidar_device" ] && command -v python3 &> /dev/null; then
     echo "   Testing serial communication..."
     python3 -c "
 import serial
 import time
 try:
     print('   Opening serial connection...')
-    ser = serial.Serial('/dev/ttyUSB1', 115200, timeout=2)
+    ser = serial.Serial('$lidar_device', 115200, timeout=2)
     time.sleep(1)
     print('   ✓ Serial connection successful')
     ser.close()

@@ -8,7 +8,7 @@ from launch.conditions import IfCondition
 
 def generate_launch_description():
     # Launch arguments
-    serial_port = LaunchConfiguration('serial_port', default='/dev/ttyUSB0')
+    serial_port = LaunchConfiguration('serial_port', default='/dev/serial/by-id/usb-1a86_USB_Serial-if00-port0')
     use_rviz = LaunchConfiguration('use_rviz', default='true')
     
     # Paths to configuration files
