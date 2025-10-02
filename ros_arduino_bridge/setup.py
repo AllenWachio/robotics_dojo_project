@@ -12,8 +12,15 @@ setup(
         ('share/ament_index/resource_index/packages',
             ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
-    (os.path.join('share', package_name, 'launch'), glob('launch/*.py') + glob('deployment/laptop/launch/*.py')),
+        # Main launch files
+        (os.path.join('share', package_name, 'launch'), glob('launch/*.py')),
+        # Deployment launch files - properly organized
+        (os.path.join('share', package_name, 'deployment/pi/launch'), glob('deployment/pi/launch/*.py')),
+        (os.path.join('share', package_name, 'deployment/laptop/launch'), glob('deployment/laptop/launch/*.py')),
+        # Config files
         (os.path.join('share', package_name, 'config'), glob('config/*.yaml') + glob('config/*.rviz')),
+        (os.path.join('share', package_name, 'deployment/laptop/config'), glob('deployment/laptop/config/*.yaml') + glob('deployment/laptop/config/*.rviz')),
+        # URDF and meshes
         (os.path.join('share', package_name, 'urdf'), glob('urdf/*.xacro') + glob('urdf/*.gazebo') + glob('urdf/*.trans')),
         (os.path.join('share', package_name, 'meshes'), glob('meshes/*.stl')),
         # Deployment folders - explicit file selection to avoid __pycache__
