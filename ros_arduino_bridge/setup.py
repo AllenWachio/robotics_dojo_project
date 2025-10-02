@@ -4,6 +4,14 @@ from glob import glob
 
 package_name = 'ros_arduino_bridge'
 
+# Helper function to filter out deployment-related launch files from main launch directory
+def get_main_launch_files():
+    """Get main launch files, excluding those that have deployment equivalents"""
+    all_launch_files = glob('launch/*.py')
+    # Exclude files that are now in deployment structure
+    exclude_files = ['launch/arduino_only.launch.py']  # Add more if needed
+    return [f for f in all_launch_files if f not in exclude_files]
+
 setup(
     name=package_name,
     version='1.0.0',
@@ -12,8 +20,8 @@ setup(
         ('share/ament_index/resource_index/packages',
             ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
-        # Main launch files
-        (os.path.join('share', package_name, 'launch'), glob('launch/*.py')),
+        # Main launch files (excluding deployment duplicates)
+        (os.path.join('share', package_name, 'launch'), get_main_launch_files()),
         # Deployment launch files - properly organized
         (os.path.join('share', package_name, 'deployment/pi/launch'), glob('deployment/pi/launch/*.py')),
         (os.path.join('share', package_name, 'deployment/laptop/launch'), glob('deployment/laptop/launch/*.py')),
