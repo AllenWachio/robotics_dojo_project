@@ -53,7 +53,7 @@ def generate_launch_description():
             'baud_rate': 57600,
             'base_width': 0.208000,
             'wheel_radius': 0.042500,
-            'encoder_ticks_per_rev': 44,
+            'encoder_ticks_per_rev': 283,
             'max_linear_speed': 0.5,
             'max_angular_speed': 1.0
         }]

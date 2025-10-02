@@ -52,7 +52,7 @@ def generate_launch_description():
             # Calibrated robot parameters
             'base_width': 0.208000,      # 20.8cm wheelbase
             'wheel_radius': 0.042500,    # 85mm diameter wheels
-            'encoder_ticks_per_rev': 44, # 25GA370 motor specs
+            'encoder_ticks_per_rev': 283, # Measured encoder ticks
             
             # Frame names
             'odom_frame': 'odom',

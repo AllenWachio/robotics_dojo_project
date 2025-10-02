@@ -102,8 +102,11 @@ def measure_robot_parameters():
         print("⚠️  WARNING: Wheel radius seems unusual. Please double-check measurement.")
     if base_width < 0.1 or base_width > 0.5:
         print("⚠️  WARNING: Base width seems unusual. Please double-check measurement.")
-    if encoder_ticks not in [44, 120, 334, 1440]:
-        print("⚠️  INFO: Uncommon encoder count. Verify with your motor datasheet.")
+    # Sanity checks
+    if encoder_ticks not in [283, 120, 334, 1440]:
+        print(f"   ⚠️  Unusual encoder_ticks value: {encoder_ticks}")
+        print(f"      Common values are 283, 120, 334, or 1440")
+        confirm = input("   Continue anyway? (y/n): ").strip().lower()
     
     print("✅ For better SLAM performance:")
     print("   - Ensure wheels are properly aligned")
