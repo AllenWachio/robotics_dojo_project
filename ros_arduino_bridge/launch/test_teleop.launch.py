@@ -14,9 +14,9 @@ def generate_launch_description():
         parameters=[{
             'serial_port': '/dev/serial/by-id/usb-1a86_USB_Serial-if00-port0',
             'baud_rate': 57600,
-            'base_width': 0.208000,
-            'wheel_radius': 0.042500,
-            'encoder_ticks_per_rev': 283
+            'base_width': 0.208000,      # 20.8cm wheelbase
+            'wheel_radius': 0.042500,    # 85mm diameter wheels
+            'encoder_ticks_per_rev': 870
         }]
     )
     
