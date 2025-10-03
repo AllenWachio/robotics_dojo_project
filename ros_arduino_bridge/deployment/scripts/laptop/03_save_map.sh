@@ -8,12 +8,12 @@ echo "Make sure mapping is currently running!"
 echo ""
 
 # Create maps directory if it doesn't exist
-mkdir -p ~/ros2_ws/maps
+mkdir -p $HOME/ros2_ws/maps
 
 # Function to check if map name exists
 check_map_exists() {
     local map_name="$1"
-    if [ -f ~/ros2_ws/maps/${map_name}.yaml ] || [ -f ~/ros2_ws/maps/${map_name}.pgm ]; then
+    if [ -f $HOME/ros2_ws/maps/${map_name}.yaml ] || [ -f $HOME/ros2_ws/maps/${map_name}.pgm ]; then
         return 0  # exists
     else
         return 1  # doesn't exist
@@ -40,8 +40,8 @@ while true; do
     # Check if map already exists
     if check_map_exists "$map_name"; then
         echo "❌ A map named '$map_name' already exists!"
-        echo "Existing maps in ~/ros2_ws/maps/:"
-        ls -1 ~/ros2_ws/maps/*.yaml 2>/dev/null | sed 's|.*/||' | sed 's|\.yaml||' || echo "  (no maps found)"
+        echo "Existing maps in $HOME/ros2_ws/maps/:"
+        ls -1 $HOME/ros2_ws/maps/*.yaml 2>/dev/null | sed 's|.*/||' | sed 's|\.yaml||' || echo "  (no maps found)"
         echo ""
         echo "Please choose a different name."
         continue
@@ -53,7 +53,7 @@ done
 
 echo ""
 echo "Saving map as: $map_name"
-echo "Location: ~/ros2_ws/maps/"
+echo "Location: $HOME/ros2_ws/maps/"
 echo ""
 echo "==================== SAVING MAPS ===================="
 echo "Saving in BOTH formats:"
@@ -64,12 +64,12 @@ echo ""
 
 # Save the old format map (.pgm + .yaml) - for AMCL and Nav2
 echo "📁 Step 1/2: Saving old format map..."
-ros2 run nav2_map_server map_saver_cli -f ~/ros2_ws/maps/$map_name
+ros2 run nav2_map_server map_saver_cli -f $HOME/ros2_ws/maps/$map_name
 
 if [ $? -eq 0 ]; then
     echo "✅ Old format map saved!"
-    echo "  - ~/ros2_ws/maps/${map_name}.yaml"
-    echo "  - ~/ros2_ws/maps/${map_name}.pgm"
+    echo "  - $HOME/ros2_ws/maps/${map_name}.yaml"
+    echo "  - $HOME/ros2_ws/maps/${map_name}.pgm"
 else
     echo "❌ Failed to save old format map. Make sure SLAM is running."
     exit 1
@@ -80,26 +80,27 @@ echo "📁 Step 2/2: Saving serialized map (SLAM Toolbox format)..."
 
 # Save serialized map (.data + .posegraph) - for SLAM Toolbox localization
 # This uses the slam_toolbox serialize_map service
-ros2 service call /slam_toolbox/serialize_map slam_toolbox/srv/SerializePoseGraph "{filename: '~/ros2_ws/maps/${map_name}'}"
+# IMPORTANT: Must use $HOME or absolute path - ROS services don't expand ~
+ros2 service call /slam_toolbox/serialize_map slam_toolbox/srv/SerializePoseGraph "{filename: '$HOME/ros2_ws/maps/${map_name}'}"
 
 # Check if serialized files were created
 sleep 2  # Give time for files to be written
 
-if [ -f ~/ros2_ws/maps/${map_name}.data ] && [ -f ~/ros2_ws/maps/${map_name}.posegraph ]; then
+if [ -f $HOME/ros2_ws/maps/${map_name}.data ] && [ -f $HOME/ros2_ws/maps/${map_name}.posegraph ]; then
     echo "✅ Serialized map saved!"
-    echo "  - ~/ros2_ws/maps/${map_name}.data"
-    echo "  - ~/ros2_ws/maps/${map_name}.posegraph"
+    echo "  - $HOME/ros2_ws/maps/${map_name}.data"
+    echo "  - $HOME/ros2_ws/maps/${map_name}.posegraph"
     echo ""
     echo "==================== SUCCESS ===================="
     echo "✅ All 4 map files saved successfully!"
     echo ""
     echo "📋 Files created:"
     echo "  Old format (for AMCL/Nav2):"
-    echo "    - ~/ros2_ws/maps/${map_name}.yaml"
-    echo "    - ~/ros2_ws/maps/${map_name}.pgm"
+    echo "    - $HOME/ros2_ws/maps/${map_name}.yaml"
+    echo "    - $HOME/ros2_ws/maps/${map_name}.pgm"
     echo "  Serialized format (for SLAM Toolbox localization):"
-    echo "    - ~/ros2_ws/maps/${map_name}.data"
-    echo "    - ~/ros2_ws/maps/${map_name}.posegraph"
+    echo "    - $HOME/ros2_ws/maps/${map_name}.data"
+    echo "    - $HOME/ros2_ws/maps/${map_name}.posegraph"
     echo ""
     echo "================================================="
     echo ""
@@ -108,9 +109,9 @@ if [ -f ~/ros2_ws/maps/${map_name}.data ] && [ -f ~/ros2_ws/maps/${map_name}.pos
     echo "  Option 2 (SLAM Localization): ./02b_slam_localization_mode.sh $map_name"
     echo ""
     echo "📂 All saved maps:"
-    ls -1 ~/ros2_ws/maps/*.yaml 2>/dev/null | sed 's|.*/||' | sed 's|\.yaml||' | while read map; do
+    ls -1 $HOME/ros2_ws/maps/*.yaml 2>/dev/null | sed 's|.*/||' | sed 's|\.yaml||' | while read map; do
         # Check if both formats exist
-        if [ -f ~/ros2_ws/maps/${map}.data ]; then
+        if [ -f $HOME/ros2_ws/maps/${map}.data ]; then
             echo "  - $map (✅ both formats)"
         else
             echo "  - $map (⚠️  old format only)"

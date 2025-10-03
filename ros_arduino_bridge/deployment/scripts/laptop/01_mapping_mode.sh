@@ -10,7 +10,7 @@ echo ""
 
 # Source the workspace
 source /opt/ros/humble/setup.bash
-source ~/ros2_ws/install/setup.bash
+source $HOME/ros2_ws/install/setup.bash
 
 echo "Starting mapping..."
 

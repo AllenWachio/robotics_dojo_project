@@ -15,11 +15,11 @@ map_name="$1"
 
 # If no map name provided, show available maps and ask user
 if [ -z "$map_name" ]; then
-    echo "Available maps in ~/ros2_ws/maps/:"
-    available_maps=$(ls -1 ~/ros2_ws/maps/*.yaml 2>/dev/null | sed 's|.*/||' | sed 's|\.yaml||')
+    echo "Available maps in $HOME/ros2_ws/maps/:"
+    available_maps=$(ls -1 $HOME/ros2_ws/maps/*.yaml 2>/dev/null | sed 's|.*/||' | sed 's|\.yaml||')
     
     if [ -z "$available_maps" ]; then
-        echo "❌ No maps found in ~/ros2_ws/maps/"
+        echo "❌ No maps found in $HOME/ros2_ws/maps/"
         echo "Please run mapping mode first and save a map."
         exit 1
     fi
@@ -38,7 +38,7 @@ if [ -z "$map_name" ]; then
             continue
         fi
         
-        if [ -f ~/ros2_ws/maps/${map_name}.yaml ]; then
+        if [ -f $HOME/ros2_ws/maps/${map_name}.yaml ]; then
             break
         else
             echo "❌ Map '$map_name' not found. Please choose from available maps above."
@@ -48,22 +48,23 @@ if [ -z "$map_name" ]; then
 fi
 
 # Verify the selected map exists
-if [ ! -f ~/ros2_ws/maps/${map_name}.yaml ]; then
-    echo "❌ Map file ~/ros2_ws/maps/${map_name}.yaml not found!"
+if [ ! -f $HOME/ros2_ws/maps/${map_name}.yaml ]; then
+    echo "❌ Map file $HOME/ros2_ws/maps/${map_name}.yaml not found!"
     echo "Available maps:"
-    ls -1 ~/ros2_ws/maps/*.yaml 2>/dev/null | sed 's|.*/||' | sed 's|\.yaml||' || echo "  (no maps found)"
+    ls -1 $HOME/ros2_ws/maps/*.yaml 2>/dev/null | sed 's|.*/||' | sed 's|\.yaml||' || echo "  (no maps found)"
     exit 1
 fi
 
 echo "✅ Using map: $map_name"
-echo "Map file: ~/ros2_ws/maps/${map_name}.yaml"
+echo "Map file: $HOME/ros2_ws/maps/${map_name}.yaml"
 echo ""
 
 # Source the workspace
 source /opt/ros/humble/setup.bash
-source ~/ros2_ws/install/setup.bash
+source $HOME/ros2_ws/install/setup.bash
 
 echo "Starting navigation..."
 
 # Launch navigation on laptop with specified map
-ros2 launch ros_arduino_bridge laptop_navigation.launch.py map_file:=${map_name}.yaml map_path:=~/ros2_ws/maps/
+# IMPORTANT: Use $HOME not ~ - ROS launch files don't expand ~
+ros2 launch ros_arduino_bridge laptop_navigation.launch.py map_file:=${map_name}.yaml map_path:=$HOME/ros2_ws/maps/

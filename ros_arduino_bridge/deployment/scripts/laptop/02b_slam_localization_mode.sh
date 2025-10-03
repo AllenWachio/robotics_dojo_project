@@ -19,13 +19,13 @@ map_name="$1"
 
 # If no map name provided, show available maps and ask user
 if [ -z "$map_name" ]; then
-    echo "Available maps in ~/ros2_ws/maps/:"
+    echo "Available maps in $HOME/ros2_ws/maps/:"
     
     # Find maps that have serialized format
-    available_maps=$(ls -1 ~/ros2_ws/maps/*.data 2>/dev/null | sed 's|.*/||' | sed 's|\.data||')
+    available_maps=$(ls -1 $HOME/ros2_ws/maps/*.data 2>/dev/null | sed 's|.*/||' | sed 's|\.data||')
     
     if [ -z "$available_maps" ]; then
-        echo "❌ No serialized maps found in ~/ros2_ws/maps/"
+        echo "❌ No serialized maps found in $HOME/ros2_ws/maps/"
         echo ""
         echo "You need serialized maps (.data + .posegraph) for SLAM Toolbox localization."
         echo "Options:"
@@ -36,7 +36,7 @@ if [ -z "$map_name" ]; then
     
     echo "$available_maps" | while read map; do
         # Check if both serialized files exist
-        if [ -f ~/ros2_ws/maps/${map}.data ] && [ -f ~/ros2_ws/maps/${map}.posegraph ]; then
+        if [ -f $HOME/ros2_ws/maps/${map}.data ] && [ -f $HOME/ros2_ws/maps/${map}.posegraph ]; then
             echo "  ✅ $map (serialized format available)"
         fi
     done
@@ -51,7 +51,7 @@ if [ -z "$map_name" ]; then
             continue
         fi
         
-        if [ -f ~/ros2_ws/maps/${map_name}.data ] && [ -f ~/ros2_ws/maps/${map_name}.posegraph ]; then
+        if [ -f $HOME/ros2_ws/maps/${map_name}.data ] && [ -f $HOME/ros2_ws/maps/${map_name}.posegraph ]; then
             break
         else
             echo "❌ Serialized map '$map_name' not found. Please choose from available maps above."
@@ -61,14 +61,14 @@ if [ -z "$map_name" ]; then
 fi
 
 # Verify the selected map exists (both serialized files)
-if [ ! -f ~/ros2_ws/maps/${map_name}.data ] || [ ! -f ~/ros2_ws/maps/${map_name}.posegraph ]; then
+if [ ! -f $HOME/ros2_ws/maps/${map_name}.data ] || [ ! -f $HOME/ros2_ws/maps/${map_name}.posegraph ]; then
     echo "❌ Serialized map files not found for '$map_name'!"
     echo "Required files:"
-    echo "  - ~/ros2_ws/maps/${map_name}.data"
-    echo "  - ~/ros2_ws/maps/${map_name}.posegraph"
+    echo "  - $HOME/ros2_ws/maps/${map_name}.data"
+    echo "  - $HOME/ros2_ws/maps/${map_name}.posegraph"
     echo ""
     echo "Available serialized maps:"
-    ls -1 ~/ros2_ws/maps/*.data 2>/dev/null | sed 's|.*/||' | sed 's|\.data||' || echo "  (no serialized maps found)"
+    ls -1 $HOME/ros2_ws/maps/*.data 2>/dev/null | sed 's|.*/||' | sed 's|\.data||' || echo "  (no serialized maps found)"
     echo ""
     echo "To create serialized maps, run mapping mode and use the updated save script."
     exit 1
@@ -76,16 +76,16 @@ fi
 
 echo "✅ Using serialized map: $map_name"
 echo "Map files:"
-echo "  - ~/ros2_ws/maps/${map_name}.data"
-echo "  - ~/ros2_ws/maps/${map_name}.posegraph"
+echo "  - $HOME/ros2_ws/maps/${map_name}.data"
+echo "  - $HOME/ros2_ws/maps/${map_name}.posegraph"
 echo ""
 
-# Expand ~ to full path for ROS2
-map_path_expanded="${HOME}/ros2_ws/maps"
+# Use $HOME for ROS2 (not ~ which doesn't expand in all contexts)
+map_path_expanded="$HOME/ros2_ws/maps"
 
 # Source the workspace
 source /opt/ros/humble/setup.bash
-source ~/ros2_ws/install/setup.bash
+source $HOME/ros2_ws/install/setup.bash
 
 echo "========================================="
 echo "  Starting SLAM Toolbox Localization..."
