@@ -300,6 +300,11 @@ class ROSArduinoBridge(Node):
 
         # Check if the change in encoder counts is below the threshold
         if all(abs(tick) < encoder_threshold for tick in delta_ticks):
+            # Robot is stationary - publish TF and odometry with zero velocity
+            # This ensures the TF tree is always connected even when not moving
+            self.publish_odometry(0.0, 0.0, current_time)
+            self.publish_tf(current_time)
+            self.last_odom_update = current_time
             return
 
         # Calculate wheel displacements in meters
