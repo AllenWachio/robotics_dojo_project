@@ -54,24 +54,78 @@ done
 echo ""
 echo "Saving map as: $map_name"
 echo "Location: ~/ros2_ws/maps/"
+echo ""
+echo "==================== SAVING MAPS ===================="
+echo "Saving in BOTH formats:"
+echo "  1. Old format (.pgm + .yaml) - for AMCL/Nav2"
+echo "  2. Serialized format (.data + .posegraph) - for SLAM Toolbox localization"
+echo "====================================================="
+echo ""
 
-# Save the map
+# Save the old format map (.pgm + .yaml) - for AMCL and Nav2
+echo "📁 Step 1/2: Saving old format map..."
 ros2 run nav2_map_server map_saver_cli -f ~/ros2_ws/maps/$map_name
 
 if [ $? -eq 0 ]; then
-    echo ""
-    echo "✅ Map saved successfully!"
-    echo "Files created:"
+    echo "✅ Old format map saved!"
     echo "  - ~/ros2_ws/maps/${map_name}.yaml"
     echo "  - ~/ros2_ws/maps/${map_name}.pgm"
+else
+    echo "❌ Failed to save old format map. Make sure SLAM is running."
+    exit 1
+fi
+
+echo ""
+echo "📁 Step 2/2: Saving serialized map (SLAM Toolbox format)..."
+
+# Save serialized map (.data + .posegraph) - for SLAM Toolbox localization
+# This uses the slam_toolbox serialize_map service
+ros2 service call /slam_toolbox/serialize_map slam_toolbox/srv/SerializePoseGraph "{filename: '~/ros2_ws/maps/${map_name}'}"
+
+# Check if serialized files were created
+sleep 2  # Give time for files to be written
+
+if [ -f ~/ros2_ws/maps/${map_name}.data ] && [ -f ~/ros2_ws/maps/${map_name}.posegraph ]; then
+    echo "✅ Serialized map saved!"
+    echo "  - ~/ros2_ws/maps/${map_name}.data"
+    echo "  - ~/ros2_ws/maps/${map_name}.posegraph"
     echo ""
-    echo "To use this map for navigation:"
-    echo "  ./02_navigation_mode.sh $map_name"
+    echo "==================== SUCCESS ===================="
+    echo "✅ All 4 map files saved successfully!"
     echo ""
-    echo "All saved maps:"
+    echo "📋 Files created:"
+    echo "  Old format (for AMCL/Nav2):"
+    echo "    - ~/ros2_ws/maps/${map_name}.yaml"
+    echo "    - ~/ros2_ws/maps/${map_name}.pgm"
+    echo "  Serialized format (for SLAM Toolbox localization):"
+    echo "    - ~/ros2_ws/maps/${map_name}.data"
+    echo "    - ~/ros2_ws/maps/${map_name}.posegraph"
+    echo ""
+    echo "================================================="
+    echo ""
+    echo "📍 To use this map for navigation:"
+    echo "  Option 1 (AMCL): ./02_navigation_mode.sh $map_name"
+    echo "  Option 2 (SLAM Localization): ./02b_slam_localization_mode.sh $map_name"
+    echo ""
+    echo "📂 All saved maps:"
     ls -1 ~/ros2_ws/maps/*.yaml 2>/dev/null | sed 's|.*/||' | sed 's|\.yaml||' | while read map; do
-        echo "  - $map"
+        # Check if both formats exist
+        if [ -f ~/ros2_ws/maps/${map}.data ]; then
+            echo "  - $map (✅ both formats)"
+        else
+            echo "  - $map (⚠️  old format only)"
+        fi
     done
 else
-    echo "❌ Failed to save map. Make sure SLAM is running."
+    echo "⚠️  Warning: Serialized map files not found!"
+    echo "Old format map was saved, but serialization may have failed."
+    echo "This could happen if:"
+    echo "  1. SLAM Toolbox is not running"
+    echo "  2. The serialize_map service is not available"
+    echo ""
+    echo "You can still use the old format map with AMCL:"
+    echo "  ./02_navigation_mode.sh $map_name"
+    echo ""
+    echo "To use serialized maps in the future, make sure SLAM Toolbox"
+    echo "is running when you save the map."
 fi

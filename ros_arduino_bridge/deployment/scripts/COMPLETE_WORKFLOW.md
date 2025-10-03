@@ -1,5 +1,33 @@
 # Complete Robot Workflow Guide
 
+## 🎉 Major Update: Dual Localization Support!
+
+Your robot now supports **TWO localization methods** for autonomous navigation:
+
+### **Map Format Overview**
+
+When you save a map, you now get **FOUR files**:
+
+1. **Old Format (for AMCL):**
+
+   - `map_name.pgm` - Image of the map
+   - `map_name.yaml` - Metadata file
+
+2. **Serialized Format (for SLAM Toolbox):**
+   - `map_name.data` - Pose graph data
+   - `map_name.posegraph` - Map structure
+
+### **Which Localization Method to Use?**
+
+| Method           | Pros                                               | Cons                                 | Best For                             |
+| ---------------- | -------------------------------------------------- | ------------------------------------ | ------------------------------------ |
+| **AMCL**         | Industry standard, well-tested, works with any map | Can drift over time, particle filter | Quick navigation, familiar workflows |
+| **SLAM Toolbox** | More accurate, can refine map, better loop closure | Newer technology, more CPU intensive | Long-term operation, map refinement  |
+
+**💡 Recommendation:** Try SLAM Toolbox localization first (Option C)! It provides the best results.
+
+---
+
 ## New Streamlined Approach (Recommended)
 
 ### **Raspberry Pi Setup (2 separate terminals)**
@@ -57,12 +85,14 @@ cd ~/ros2_ws/src/ros_arduino_bridge/deployment/scripts/laptop
 - ❌ `01_hardware_interface.sh` (replaced by 01_arduino_only.sh + 02_lidar_only.sh)
 - ❌ `04_lidar_troubleshoot.sh` (functionality merged into 02_lidar_only.sh)
 
-### **Laptop Scripts (unchanged):**
+### **Laptop Scripts:**
 
-- ✅ `01_mapping_mode.sh`
-- ✅ `02_navigation_mode.sh`
-- ✅ `03_save_map.sh`
-- ✅ `04_diagnostics.sh`
+- ✅ `01_mapping_mode.sh` - Create new maps with SLAM
+- ✅ `02_navigation_mode.sh` - Navigate with AMCL localization
+- ✅ `02b_slam_localization_mode.sh` - 🆕 **NEW:** SLAM Toolbox localization only
+- ✅ `02c_slam_navigation_mode.sh` - 🆕 **NEW:** Full navigation with SLAM localization
+- ✅ `03_save_map.sh` - 🔄 **UPDATED:** Now saves BOTH map formats!
+- ✅ `04_diagnostics.sh` - System diagnostics
 
 ---
 
@@ -116,9 +146,20 @@ cd ~/ros2_ws/src/ros_arduino_bridge/deployment/scripts/laptop
    ./03_save_map.sh
    # Enter a unique name for your map when prompted
    # Script will check if name already exists and ask for different name if needed
+   #
+   # 🎯 NEW: Script now saves BOTH map formats:
+   #    - Old format (.pgm + .yaml) - for AMCL/Nav2
+   #    - Serialized format (.data + .posegraph) - for SLAM Toolbox localization
+   # This gives you maximum flexibility for navigation!
    ```
 
 ### **Phase 3: Navigation (Use Map)**
+
+🆕 **You now have THREE navigation options!**
+
+#### **Option A: AMCL Navigation (Original Method)**
+
+Uses AMCL for localization with old format maps (.pgm + .yaml)
 
 1. **Pi Terminal 1:**
 
@@ -139,7 +180,67 @@ cd ~/ros2_ws/src/ros_arduino_bridge/deployment/scripts/laptop
    # OR just ./02_navigation_mode.sh and choose from available maps
    ```
 
-4. **Set goals in RViz**
+4. **Set initial pose in RViz (2D Pose Estimate)**
+5. **Set goals in RViz (2D Goal Pose or Nav2 Goal)**
+
+---
+
+#### **Option B: SLAM Toolbox Localization Only (No Navigation)**
+
+Uses SLAM Toolbox for localization with serialized maps (.data + .posegraph)
+Good for testing localization before running full navigation
+
+1. **Pi Terminal 1:**
+
+   ```bash
+   ./01_arduino_only.sh
+   ```
+
+2. **Pi Terminal 2:**
+
+   ```bash
+   ./02_lidar_only.sh
+   ```
+
+3. **Laptop:**
+
+   ```bash
+   ./02b_slam_localization_mode.sh [map_name]
+   # Uses serialized maps for SLAM Toolbox localization
+   ```
+
+4. **Set initial pose in RViz (2D Pose Estimate)**
+5. **Robot localizes on saved map - you can see its position update**
+
+---
+
+#### **Option C: Full SLAM Navigation (Recommended!)**
+
+Uses SLAM Toolbox for localization + Nav2 for autonomous navigation
+Best of both worlds!
+
+1. **Pi Terminal 1:**
+
+   ```bash
+   ./01_arduino_only.sh
+   ```
+
+2. **Pi Terminal 2:**
+
+   ```bash
+   ./02_lidar_only.sh
+   ```
+
+3. **Laptop:**
+
+   ```bash
+   ./02c_slam_navigation_mode.sh [map_name]
+   # Full navigation with SLAM Toolbox localization
+   ```
+
+4. **Set initial pose in RViz (2D Pose Estimate)**
+5. **Wait for localization to stabilize**
+6. **Set goals in RViz (2D Goal Pose or Nav2 Goal) - Robot navigates autonomously!**
 
 ---
 
