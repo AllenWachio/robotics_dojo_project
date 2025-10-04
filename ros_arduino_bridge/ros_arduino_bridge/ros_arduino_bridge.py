@@ -5,7 +5,7 @@ from rclpy.node import Node
 from geometry_msgs.msg import Twist
 from sensor_msgs.msg import Imu, Range, JointState
 from nav_msgs.msg import Odometry
-from std_msgs.msg import Float32, Int32, String, ColorRGBA
+from std_msgs.msg import Float32, Int32, String, ColorRGBA, Bool
 import serial
 import threading
 import time
@@ -65,6 +65,18 @@ class ROSArduinoBridge(Node):
         # Throttle warnings for invalid encoder data
         self._last_invalid_encoder_warn = 0.0
 
+        # Servo state
+        self.camera_servo_angle = 50  # Initial position from Arduino
+        self.tipper_servo_angle = 170  # Initial position from Arduino
+
+        # Color sensor state
+        self.color_rgb = [0, 0, 0]  # R, G, B raw values
+        self.color_led_state = False
+
+        # Stepper state
+        self.stepper_active = False
+        self.stepper_last_command = ""
+
         # Publishers
         self.odom_pub = self.create_publisher(Odometry, "odom", 10)
         # IMU and ultrasonic publishers temporarily disabled (encoders-only mode)
@@ -75,10 +87,34 @@ class ROSArduinoBridge(Node):
         self.raw_encoder_pub = self.create_publisher(String, "raw_encoders", 10)
         # Joint states for visualization (RViz / joint_state_publisher expects /joint_states)
         self.joint_state_pub = self.create_publisher(JointState, "joint_states", 10)
+        
+        # New publishers for additional sensors/actuators (with debug topics)
+        self.color_sensor_pub = self.create_publisher(ColorRGBA, "color_sensor/rgb", 10)
+        self.color_sensor_raw_pub = self.create_publisher(String, "color_sensor/raw", 10)  # Debug topic
+        self.stepper_status_pub = self.create_publisher(Bool, "stepper/active", 10)
+        self.stepper_debug_pub = self.create_publisher(String, "stepper/debug", 10)  # Debug topic
+        self.camera_servo_feedback_pub = self.create_publisher(Int32, "camera_servo/angle", 10)
+        self.camera_servo_debug_pub = self.create_publisher(String, "camera_servo/debug", 10)  # Debug topic
+        self.tipper_servo_feedback_pub = self.create_publisher(Int32, "tipper_servo/angle", 10)
+        self.tipper_servo_debug_pub = self.create_publisher(String, "tipper_servo/debug", 10)  # Debug topic
 
         # Subscribers
         self.cmd_vel_sub = self.create_subscription(
             Twist, "cmd_vel", self.cmd_vel_callback, 10
+        )
+        
+        # New subscribers for servos and stepper
+        self.camera_servo_sub = self.create_subscription(
+            Int32, "camera_servo/command", self.camera_servo_callback, 10
+        )
+        self.tipper_servo_sub = self.create_subscription(
+            Int32, "tipper_servo/command", self.tipper_servo_callback, 10
+        )
+        self.stepper_sub = self.create_subscription(
+            String, "stepper/command", self.stepper_callback, 10
+        )
+        self.color_led_sub = self.create_subscription(
+            Bool, "color_sensor/led", self.color_led_callback, 10
         )
 
         # TF Broadcaster
@@ -88,6 +124,7 @@ class ROSArduinoBridge(Node):
         self.data_timer = self.create_timer(0.05, self.update_sensor_data)  # 20Hz
         self.odom_timer = self.create_timer(0.1, self.update_odometry)  # 10Hz
         self.state_timer = self.create_timer(1.0, self.publish_robot_state)  # 1Hz
+        self.color_timer = self.create_timer(0.2, self.read_color_sensor)  # 5Hz
 
         self.get_logger().info("ROS Arduino Bridge node started")
 
@@ -195,6 +232,140 @@ class ROSArduinoBridge(Node):
             f"left_pwm={left_pwm} right_pwm={right_pwm} | cmd={command}"
         )
 
+    def camera_servo_callback(self, msg):
+        """Handle camera servo position commands"""
+        angle = max(0, min(180, msg.data))  # Clamp to 0-180
+        self.camera_servo_angle = angle
+        # Command format: s <servo_index> <angle>
+        # Camera servo is index 0 (CAMERA_SERVO_INDEX)
+        command = f"s 0 {angle}"
+        if self.send_command(command):
+            self.get_logger().debug(f"Camera servo set to {angle} degrees")
+            # Publish feedback
+            feedback = Int32()
+            feedback.data = angle
+            self.camera_servo_feedback_pub.publish(feedback)
+            # Publish debug info
+            debug_msg = String()
+            debug_msg.data = f"Camera servo commanded to {angle}°, sent: '{command}'"
+            self.camera_servo_debug_pub.publish(debug_msg)
+
+    def tipper_servo_callback(self, msg):
+        """Handle tipper servo position commands"""
+        angle = max(0, min(180, msg.data))  # Clamp to 0-180
+        self.tipper_servo_angle = angle
+        # Command format: s <servo_index> <angle>
+        # Tipper servo is index 1 (TIPPER_SERVO_INDEX)
+        command = f"s 1 {angle}"
+        if self.send_command(command):
+            self.get_logger().debug(f"Tipper servo set to {angle} degrees")
+            # Publish feedback
+            feedback = Int32()
+            feedback.data = angle
+            self.tipper_servo_feedback_pub.publish(feedback)
+            # Publish debug info
+            debug_msg = String()
+            debug_msg.data = f"Tipper servo commanded to {angle}°, sent: '{command}'"
+            self.tipper_servo_debug_pub.publish(debug_msg)
+
+    def stepper_callback(self, msg):
+        """Handle stepper motor commands
+        Expected format: "rpm:distance_mm:flag"
+        Example: "-25:400:0" - move at 25 RPM for 400mm
+                 "0:0:1" - return to zero position
+        """
+        try:
+            parts = msg.data.split(':')
+            if len(parts) != 3:
+                self.get_logger().error(f"Invalid stepper command format: {msg.data}")
+                debug_msg = String()
+                debug_msg.data = f"ERROR: Invalid format '{msg.data}', expected 'rpm:distance:flag'"
+                self.stepper_debug_pub.publish(debug_msg)
+                return
+            
+            rpm = int(parts[0])
+            distance_mm = int(parts[1])
+            flag = int(parts[2])
+            
+            # Command format: q rpm:distance:flag
+            command = f"q {rpm}:{distance_mm}:{flag}"
+            self.stepper_last_command = msg.data
+            
+            if self.send_command(command):
+                self.stepper_active = True
+                self.get_logger().info(
+                    f"Stepper command: RPM={rpm}, Distance={distance_mm}mm, Flag={flag}"
+                )
+                
+                # Publish status
+                status_msg = Bool()
+                status_msg.data = True
+                self.stepper_status_pub.publish(status_msg)
+                
+                # Publish debug info
+                debug_msg = String()
+                debug_msg.data = f"Stepper: rpm={rpm}, dist={distance_mm}mm, flag={flag}, cmd='{command}'"
+                self.stepper_debug_pub.publish(debug_msg)
+        
+        except ValueError as e:
+            self.get_logger().error(f"Error parsing stepper command: {e}")
+            debug_msg = String()
+            debug_msg.data = f"ERROR parsing: {str(e)}"
+            self.stepper_debug_pub.publish(debug_msg)
+
+    def color_led_callback(self, msg):
+        """Control color sensor LED"""
+        self.color_led_state = msg.data
+        # Command format: v 1 (LED on) or v 0 (LED off)
+        led_val = '1' if msg.data else '0'
+        command = f"v {led_val}"
+        if self.send_command(command):
+            self.get_logger().debug(f"Color sensor LED: {'ON' if msg.data else 'OFF'}")
+            # Publish debug info
+            debug_msg = String()
+            debug_msg.data = f"Color LED: {'ON' if msg.data else 'OFF'}, cmd='{command}'"
+            self.color_sensor_raw_pub.publish(debug_msg)
+
+    def read_color_sensor(self):
+        """Read color sensor data periodically"""
+        if not self.serial or not self.serial.is_open:
+            return
+        
+        # Send color read command
+        if self.send_command("v"):
+            start = time.time()
+            # Wait up to 0.5s for response
+            while time.time() - start < 0.5:
+                line = self.read_serial_line()
+                if not line:
+                    continue
+                try:
+                    # Expected format: "R G B" (space-separated integers)
+                    values = list(map(int, line.split()))
+                    if len(values) == 3:
+                        self.color_rgb = values
+                        
+                        # Publish normalized color data (0-1 range)
+                        color_msg = ColorRGBA()
+                        # Normalize to 0-1 range (assuming 16-bit values from TCS34725)
+                        color_msg.r = float(values[0]) / 65535.0
+                        color_msg.g = float(values[1]) / 65535.0
+                        color_msg.b = float(values[2]) / 65535.0
+                        color_msg.a = 1.0
+                        
+                        self.color_sensor_pub.publish(color_msg)
+                        
+                        # Publish raw debug data
+                        raw_msg = String()
+                        raw_msg.data = f"R:{values[0]} G:{values[1]} B:{values[2]}"
+                        self.color_sensor_raw_pub.publish(raw_msg)
+                        
+                        self.get_logger().debug(f"Color RGB: {values}")
+                        break
+                except ValueError:
+                    self.get_logger().debug(f"Ignoring non-color line: '{line}'")
+                    continue
+
     def update_sensor_data(self):
         """Periodically read sensor data from Arduino"""
         if not self.serial or not self.serial.is_open:
@@ -273,11 +444,23 @@ class ROSArduinoBridge(Node):
         #                 pass
 
         # Read robot state
-        if self.send_command("s"):
+        if self.send_command("y"):
             line = self.read_serial_line()
             if line:
                 try:
                     self.robot_state = int(line)
+                    
+                    # Check if robot is in offloading state (stepper active)
+                    if self.robot_state == 0:  # OFFLOADING state
+                        self.stepper_active = True
+                    else:
+                        self.stepper_active = False
+                    
+                    # Publish stepper status
+                    status_msg = Bool()
+                    status_msg.data = self.stepper_active
+                    self.stepper_status_pub.publish(status_msg)
+                    
                 except ValueError:
                     pass
 
