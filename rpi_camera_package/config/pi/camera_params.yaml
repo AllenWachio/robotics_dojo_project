@@ -1,0 +1,33 @@
+/camera/camera:
+  ros__parameters:
+    # Camera device
+    video_device: "/dev/video0"
+
+    # Image format
+    image_size: [640, 480]
+    pixel_format: "YUYV" # or "MJPEG" for better performance if supported
+
+    # Frame rate (denominator, numerator) - 30 FPS
+    time_per_frame: [1, 30]
+
+    # Camera settings
+    camera_frame_id: "camera_optical_frame"
+    camera_name: "rpi_camera"
+
+    # Auto settings (-1 means auto)
+    brightness: -1 # Auto
+    contrast: -1 # Auto
+    saturation: -1 # Auto
+    sharpness: -1 # Auto
+    gain: -1 # Auto
+
+    # Exposure settings
+    auto_exposure: 1 # 1 = auto, 0 = manual
+    exposure: 100
+
+    # White balance
+    auto_white_balance: true
+    white_balance: 4000
+
+    # Camera info URL (optional - for camera calibration)
+    # camera_info_url: "file:///home/pi/camera_calibration.yaml"

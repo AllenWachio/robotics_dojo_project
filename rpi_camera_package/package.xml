@@ -3,10 +3,11 @@
 <package format="3">
   <name>rpi_camera_package</name>
   <version>0.0.0</version>
-  <description>Raspberry Pi Camera ROS2 package with color detection and disease classification</description>
+  <description>ROS2 Camera Package - Distributed Pi/Laptop with V4L2 camera, color detection, and potato disease detection</description>
   <maintainer email="allenkizitowachio@gmail.com">Allen Kizito Wachio</maintainer>
   <license>Apache-2.0</license>
 
+  <!-- Core ROS2 dependencies -->
   <depend>rclpy</depend>
   <depend>sensor_msgs</depend>
   <depend>cv_bridge</depend>
@@ -14,8 +15,18 @@
   <depend>std_msgs</depend>
   <depend>geometry_msgs</depend>
 
+  <!-- Camera packages (Pi side) -->
+  <exec_depend>v4l2_camera</exec_depend>
+  <exec_depend>image_transport_plugins</exec_depend>
+  <exec_depend>camera_info_manager</exec_depend>
+
+  <!-- Processing (Laptop side) -->
   <exec_depend>opencv_python</exec_depend>
-  <exec_depend>python3-picamera2</exec_depend>
+
+  <!-- ML/AI dependencies for disease detection -->
+  <exec_depend>python3-torch</exec_depend>
+  <exec_depend>python3-torchvision</exec_depend>
+  <exec_depend>python3-pil</exec_depend>
 
   <test_depend>ament_copyright</test_depend>
   <test_depend>ament_flake8</test_depend>
