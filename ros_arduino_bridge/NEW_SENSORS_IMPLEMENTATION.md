@@ -1,7 +1,9 @@
 # New Sensors and Actuators Implementation
 
 ## Summary
+
 Added support for:
+
 1. **Color Sensor (TCS34725)** - RGB color detection
 2. **Camera Servo** - Pan/tilt camera positioning
 3. **Tipper Servo** - Tipping mechanism control
@@ -10,6 +12,7 @@ Added support for:
 ## Changes Made to `ros_arduino_bridge.py`
 
 ### New State Variables
+
 ```python
 # Servo state
 self.camera_servo_angle = 50      # Initial position from Arduino
@@ -27,26 +30,29 @@ self.stepper_last_command = ""
 ### New ROS2 Topics
 
 #### Publishers (Output - what you can monitor)
-| Topic | Type | Rate | Description |
-|-------|------|------|-------------|
-| `/color_sensor/rgb` | ColorRGBA | 5Hz | Normalized RGB values (0-1 range) |
-| `/color_sensor/raw` | String | 5Hz | **DEBUG**: Raw RGB values (0-65535) |
-| `/stepper/active` | Bool | 20Hz | Stepper motor running status |
-| `/stepper/debug` | String | On cmd | **DEBUG**: Stepper command details |
-| `/camera_servo/angle` | Int32 | On cmd | Camera servo position feedback |
-| `/camera_servo/debug` | String | On cmd | **DEBUG**: Camera servo commands |
-| `/tipper_servo/angle` | Int32 | On cmd | Tipper servo position feedback |
-| `/tipper_servo/debug` | String | On cmd | **DEBUG**: Tipper servo commands |
+
+| Topic                 | Type      | Rate   | Description                         |
+| --------------------- | --------- | ------ | ----------------------------------- |
+| `/color_sensor/rgb`   | ColorRGBA | 5Hz    | Normalized RGB values (0-1 range)   |
+| `/color_sensor/raw`   | String    | 5Hz    | **DEBUG**: Raw RGB values (0-65535) |
+| `/stepper/active`     | Bool      | 20Hz   | Stepper motor running status        |
+| `/stepper/debug`      | String    | On cmd | **DEBUG**: Stepper command details  |
+| `/camera_servo/angle` | Int32     | On cmd | Camera servo position feedback      |
+| `/camera_servo/debug` | String    | On cmd | **DEBUG**: Camera servo commands    |
+| `/tipper_servo/angle` | Int32     | On cmd | Tipper servo position feedback      |
+| `/tipper_servo/debug` | String    | On cmd | **DEBUG**: Tipper servo commands    |
 
 #### Subscribers (Input - what you can control)
-| Topic | Type | Description |
-|-------|------|-------------|
-| `/camera_servo/command` | Int32 | Set camera servo angle (0-180°) |
-| `/tipper_servo/command` | Int32 | Set tipper servo angle (0-180°) |
-| `/stepper/command` | String | Stepper command: "rpm:distance_mm:flag" |
-| `/color_sensor/led` | Bool | Control color sensor LED (true=ON, false=OFF) |
+
+| Topic                   | Type   | Description                                   |
+| ----------------------- | ------ | --------------------------------------------- |
+| `/camera_servo/command` | Int32  | Set camera servo angle (0-180°)               |
+| `/tipper_servo/command` | Int32  | Set tipper servo angle (0-180°)               |
+| `/stepper/command`      | String | Stepper command: "rpm:distance_mm:flag"       |
+| `/color_sensor/led`     | Bool   | Control color sensor LED (true=ON, false=OFF) |
 
 ### New Timer
+
 ```python
 self.color_timer = self.create_timer(0.2, self.read_color_sensor)  # 5Hz color reading
 ```
@@ -54,29 +60,34 @@ self.color_timer = self.create_timer(0.2, self.read_color_sensor)  # 5Hz color r
 ## Arduino Communication Protocol
 
 ### Commands Sent to Arduino
-| Command | Format | Example | Description |
-|---------|--------|---------|-------------|
-| `s` | `s <index> <angle>` | `s 0 90` | Set servo angle (0=camera, 1=tipper) |
-| `q` | `q <rpm>:<dist>:<flag>` | `q -25:400:0` | Stepper command |
-| `v` | `v` or `v 0` or `v 1` | `v 1` | Read color sensor / control LED |
-| `y` | `y` | `y` | Get robot state (includes stepper status) |
+
+| Command | Format                  | Example       | Description                               |
+| ------- | ----------------------- | ------------- | ----------------------------------------- |
+| `s`     | `s <index> <angle>`     | `s 0 90`      | Set servo angle (0=camera, 1=tipper)      |
+| `q`     | `q <rpm>:<dist>:<flag>` | `q -25:400:0` | Stepper command                           |
+| `v`     | `v` or `v 0` or `v 1`   | `v 1`         | Read color sensor / control LED           |
+| `y`     | `y`                     | `y`           | Get robot state (includes stepper status) |
 
 ### Expected Responses from Arduino
-| Command | Response Format | Example |
-|---------|-----------------|---------|
-| Color read | `R G B` (space-separated) | `45231 12456 8932` |
-| State | Single integer | `0` (OFFLOADING), `1` (MOVING), `2` (STATIONARY) |
+
+| Command    | Response Format           | Example                                          |
+| ---------- | ------------------------- | ------------------------------------------------ |
+| Color read | `R G B` (space-separated) | `45231 12456 8932`                               |
+| State      | Single integer            | `0` (OFFLOADING), `1` (MOVING), `2` (STATIONARY) |
 
 ## Testing When Running `./01_arduino_only.sh`
 
 ### ✅ YES - The new code WILL run!
+
 When you run `./01_arduino_only.sh`, it launches:
+
 1. **Robot State Publisher** - TF tree
 2. **Arduino Bridge Node** - Your updated `ros_arduino_bridge.py`
 
 All new sensors and actuators will be available!
 
 ### Debug Topics (Like `/raw_encoders`)
+
 These topics are perfect for debugging, similar to `/raw_encoders`:
 
 ```bash
@@ -94,6 +105,7 @@ ros2 topic list | grep -E "(raw|debug)"
 ### Testing Commands
 
 #### 1. **Camera Servo Test**
+
 ```bash
 # Set camera to 90 degrees (center)
 ros2 topic pub --once /camera_servo/command std_msgs/msg/Int32 "data: 90"
@@ -106,6 +118,7 @@ ros2 topic echo /camera_servo/debug
 ```
 
 #### 2. **Tipper Servo Test**
+
 ```bash
 # Tip to 45 degrees
 ros2 topic pub --once /tipper_servo/command std_msgs/msg/Int32 "data: 45"
@@ -118,6 +131,7 @@ ros2 topic echo /tipper_servo/debug
 ```
 
 #### 3. **Stepper Motor Test**
+
 ```bash
 # Move forward 400mm at 25 RPM
 ros2 topic pub --once /stepper/command std_msgs/msg/String "data: '25:400:0'"
@@ -133,6 +147,7 @@ ros2 topic echo /stepper/debug
 ```
 
 #### 4. **Color Sensor Test**
+
 ```bash
 # Turn LED ON
 ros2 topic pub --once /color_sensor/led std_msgs/msg/Bool "data: true"
@@ -148,6 +163,7 @@ ros2 topic echo /color_sensor/rgb
 ```
 
 ### Quick Debug Script
+
 Create this script for easy testing: `~/test_new_sensors.sh`
 
 ```bash
@@ -172,6 +188,7 @@ echo "  Color:   ros2 topic pub --once /color_sensor/led std_msgs/msg/Bool 'data
 ```
 
 ### Monitor All Topics
+
 ```bash
 # List all topics (should see new ones)
 ros2 topic list
@@ -190,6 +207,7 @@ ros2 topic hz /color_sensor/raw
 ### Example Debug Output
 
 When you publish a camera servo command:
+
 ```bash
 $ ros2 topic echo /camera_servo/debug
 data: "Camera servo commanded to 90°, sent: 's 0 90'"
@@ -197,6 +215,7 @@ data: "Camera servo commanded to 90°, sent: 's 0 90'"
 ```
 
 When stepper is running:
+
 ```bash
 $ ros2 topic echo /stepper/debug
 data: "Stepper: rpm=25, dist=400mm, flag=0, cmd='q 25:400:0'"
@@ -204,6 +223,7 @@ data: "Stepper: rpm=25, dist=400mm, flag=0, cmd='q 25:400:0'"
 ```
 
 When color sensor reads:
+
 ```bash
 $ ros2 topic echo /color_sensor/raw
 data: "R:45231 G:12456 B:8932"
@@ -213,11 +233,13 @@ data: "R:45231 G:12456 B:8932"
 ## Integration with Robot State Machine
 
 The Arduino state machine now controls sensor data transmission:
+
 - **STATE_OFFLOADING (0)**: Stepper active, minimal data
 - **STATE_MOVING (1)**: All sensors active
 - **STATE_STATIONARY (2)**: Limited data
 
 The Python bridge automatically:
+
 - Detects state from Arduino
 - Updates `/stepper/active` accordingly
 - Maintains all debug topics regardless of state
@@ -225,6 +247,7 @@ The Python bridge automatically:
 ## Rebuild Instructions
 
 After code changes:
+
 ```bash
 cd ~/ros2_ws
 colcon build --packages-select ros_arduino_bridge
@@ -232,6 +255,7 @@ source install/setup.bash
 ```
 
 Then test:
+
 ```bash
 ./01_arduino_only.sh
 ```
@@ -239,6 +263,7 @@ Then test:
 ## Troubleshooting
 
 ### No response from servos?
+
 ```bash
 # Check if commands are being sent
 ros2 topic echo /camera_servo/debug
@@ -248,6 +273,7 @@ ros2 topic echo /raw_encoders  # Should see encoder data
 ```
 
 ### Color sensor not reading?
+
 ```bash
 # Check raw topic
 ros2 topic echo /color_sensor/raw
@@ -257,6 +283,7 @@ ros2 topic pub --once /color_sensor/led std_msgs/msg/Bool "data: true"
 ```
 
 ### Stepper not moving?
+
 ```bash
 # Check status
 ros2 topic echo /stepper/active

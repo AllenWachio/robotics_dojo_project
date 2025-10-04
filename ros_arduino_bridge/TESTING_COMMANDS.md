@@ -26,6 +26,7 @@ ros2 topic echo /robot_state
 ## 1. Camera Servo Tests
 
 ### Test Camera Movement
+
 ```bash
 # Move camera to center (90°)
 ros2 topic pub --once /camera_servo/command std_msgs/msg/Int32 "data: 90"
@@ -44,6 +45,7 @@ ros2 topic pub --once /camera_servo/command std_msgs/msg/Int32 "data: 50"
 ```
 
 ### Monitor Camera Feedback
+
 ```bash
 # Check current angle
 ros2 topic echo /camera_servo/angle --once
@@ -57,6 +59,7 @@ ros2 topic echo /camera_servo/angle
 ## 2. Tipper Servo Tests
 
 ### Test Tipper Movement
+
 ```bash
 # Tip down (45°) - dumps object
 ros2 topic pub --once /tipper_servo/command std_msgs/msg/Int32 "data: 45"
@@ -73,6 +76,7 @@ ros2 topic pub --once /tipper_servo/command std_msgs/msg/Int32 "data: 130"
 ```
 
 ### Monitor Tipper Feedback
+
 ```bash
 # Check current angle
 ros2 topic echo /tipper_servo/angle --once
@@ -86,6 +90,7 @@ ros2 topic echo /tipper_servo/angle
 ## 3. Stepper Motor (Conveyor) Tests
 
 ### Test Stepper Movement
+
 ```bash
 # Move forward 100mm at 25 RPM
 ros2 topic pub --once /stepper/command std_msgs/msg/String "data: '25:100:0'"
@@ -104,6 +109,7 @@ ros2 topic pub --once /stepper/command std_msgs/msg/String "data: '35:300:0'"
 ```
 
 ### Monitor Stepper Status
+
 ```bash
 # Check if stepper is active (true/false)
 ros2 topic echo /stepper/active
@@ -120,6 +126,7 @@ ros2 topic echo /robot_state --once
 ## 4. Color Sensor Tests
 
 ### Control Color Sensor LED
+
 ```bash
 # Turn LED ON (for better readings)
 ros2 topic pub --once /color_sensor/led std_msgs/msg/Bool "data: true"
@@ -129,6 +136,7 @@ ros2 topic pub --once /color_sensor/led std_msgs/msg/Bool "data: false"
 ```
 
 ### Monitor Color Readings
+
 ```bash
 # Watch raw RGB values (0-65535 range)
 ros2 topic echo /color_sensor/raw
@@ -142,6 +150,7 @@ ros2 topic echo /color_sensor/rgb --once
 ```
 
 ### Test Color Detection
+
 ```bash
 # 1. Turn LED on
 ros2 topic pub --once /color_sensor/led std_msgs/msg/Bool "data: true"
@@ -151,7 +160,7 @@ ros2 topic echo /color_sensor/raw
 
 # You should see different RGB values for:
 # - Red object: High R, low G, low B
-# - Green object: Low R, high G, low B  
+# - Green object: Low R, high G, low B
 # - Blue object: Low R, low G, high B
 # - White object: High R, high G, high B
 # - Black object: Low R, low G, low B
@@ -162,6 +171,7 @@ ros2 topic echo /color_sensor/raw
 ## 5. Combined Workflow Tests
 
 ### Full Offload Sequence Test
+
 ```bash
 # 1. Monitor stepper status in one terminal
 ros2 topic echo /stepper/active
@@ -184,6 +194,7 @@ ros2 topic pub --once /stepper/command std_msgs/msg/String "data: '0:0:1'"
 ```
 
 ### Color Detection + Camera Positioning
+
 ```bash
 # 1. Turn on color sensor LED
 ros2 topic pub --once /color_sensor/led std_msgs/msg/Bool "data: true"
@@ -200,6 +211,7 @@ ros2 topic echo /color_sensor/raw
 ## 6. Quick Diagnostic Commands
 
 ### Check All Topic Rates
+
 ```bash
 # Check if color sensor is publishing at ~5Hz
 ros2 topic hz /color_sensor/raw
@@ -212,11 +224,13 @@ ros2 topic hz /camera_servo/angle
 ```
 
 ### List All Available Topics
+
 ```bash
 ros2 topic list
 ```
 
 ### Check Topic Types
+
 ```bash
 ros2 topic type /camera_servo/command
 ros2 topic type /stepper/command
@@ -224,6 +238,7 @@ ros2 topic type /color_sensor/rgb
 ```
 
 ### Echo Multiple Topics Simultaneously
+
 ```bash
 # Open in multiple terminals
 ros2 topic echo /camera_servo/debug &
@@ -237,6 +252,7 @@ ros2 topic echo /color_sensor/raw &
 ## 7. Verify Communication with Arduino
 
 ### Check if Commands Reach Arduino
+
 ```bash
 # Monitor debug topics while sending commands
 # Terminal 1:
@@ -249,6 +265,7 @@ ros2 topic pub --once /camera_servo/command std_msgs/msg/Int32 "data: 90"
 ```
 
 ### Check Raw Encoder Data (Verify Arduino Connection)
+
 ```bash
 # If this works, Arduino is connected properly
 ros2 topic echo /raw_encoders --once
@@ -299,6 +316,7 @@ echo "=== Test Complete ==="
 ```
 
 Make it executable and run:
+
 ```bash
 chmod +x ~/quick_test.sh
 ~/quick_test.sh
@@ -309,22 +327,26 @@ chmod +x ~/quick_test.sh
 ## Expected Behavior
 
 ### Camera Servo (s 0 <angle>)
+
 - Should hear servo move
 - Check `/camera_servo/angle` feedback matches command
 - `/camera_servo/debug` shows command sent to Arduino
 
 ### Tipper Servo (s 1 <angle>)
+
 - Should hear servo move
 - Check `/tipper_servo/angle` feedback matches command
 - `/tipper_servo/debug` shows command sent to Arduino
 
 ### Stepper Motor (q rpm:distance:flag)
+
 - Should hear stepper running
 - `/stepper/active` = true while moving
 - `/robot_state` = 0 (OFFLOADING) during movement
 - `/stepper/debug` shows parsed command
 
 ### Color Sensor (v or v 0/1)
+
 - `/color_sensor/raw` updates every ~0.2s (5Hz)
 - RGB values change when different colors placed under sensor
 - LED control visible on sensor board
@@ -334,6 +356,7 @@ chmod +x ~/quick_test.sh
 ## Troubleshooting
 
 ### No servo movement?
+
 ```bash
 # Check if command is being sent
 ros2 topic echo /camera_servo/debug --once
@@ -346,6 +369,7 @@ ros2 topic echo /raw_encoders --once
 ```
 
 ### No color readings?
+
 ```bash
 # Turn LED on first
 ros2 topic pub --once /color_sensor/led std_msgs/msg/Bool "data: true"
@@ -358,6 +382,7 @@ ros2 topic echo /color_sensor/raw --once
 ```
 
 ### Stepper not moving?
+
 ```bash
 # Check if command was received
 ros2 topic echo /stepper/debug
@@ -373,11 +398,11 @@ ros2 topic pub --once /stepper/command std_msgs/msg/String "data: '15:50:0'"
 
 ## Summary of Command Formats
 
-| Device | Command Format | Example |
-|--------|---------------|---------|
-| Camera Servo | `std_msgs/msg/Int32 "data: <angle>"` | `data: 90` |
-| Tipper Servo | `std_msgs/msg/Int32 "data: <angle>"` | `data: 45` |
-| Stepper | `std_msgs/msg/String "data: 'rpm:mm:flag'"` | `data: '25:400:0'` |
-| Color LED | `std_msgs/msg/Bool "data: <true/false>"` | `data: true` |
+| Device       | Command Format                              | Example            |
+| ------------ | ------------------------------------------- | ------------------ |
+| Camera Servo | `std_msgs/msg/Int32 "data: <angle>"`        | `data: 90`         |
+| Tipper Servo | `std_msgs/msg/Int32 "data: <angle>"`        | `data: 45`         |
+| Stepper      | `std_msgs/msg/String "data: 'rpm:mm:flag'"` | `data: '25:400:0'` |
+| Color LED    | `std_msgs/msg/Bool "data: <true/false>"`    | `data: true`       |
 
 All commands use `ros2 topic pub --once <topic> <type> <data>`
