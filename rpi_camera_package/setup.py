@@ -77,6 +77,8 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
+            # Pi camera nodes
+            'rpicam_node = rpi_camera_package.rpicam_node:main',
             # Laptop processing nodes
             'color_detection_node = rpi_camera_package.laptop_nodes.color_detection_node:main',
             'disease_detection_node = rpi_camera_package.laptop_nodes.disease_detection_node:main',

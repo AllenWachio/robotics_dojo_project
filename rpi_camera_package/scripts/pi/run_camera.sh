@@ -23,7 +23,9 @@ NC='\033[0m' # No Color
 
 # Configuration
 WORKSPACE_PATH="$HOME/ros2_ws"
-VIDEO_DEVICE="/dev/video0"
+WIDTH=1280
+HEIGHT=720
+FRAMERATE=15
 JPEG_QUALITY=80
 
 ################################################################################
@@ -71,44 +73,35 @@ if [ ! -d "$WORKSPACE_PATH" ]; then
 fi
 print_success "Workspace found"
 
-# Check 2: Camera device exists
-print_info "Checking camera device..."
-if [ ! -e "$VIDEO_DEVICE" ]; then
-    print_error "Camera device not found at $VIDEO_DEVICE"
+# Check 2: rpicam-apps installed
+print_info "Checking rpicam-apps installation..."
+if ! command -v rpicam-vid &> /dev/null; then
+    print_error "rpicam-vid not found"
     echo ""
-    echo "Solutions:"
-    echo "  1. Enable legacy camera: sudo raspi-config → Interface Options → Legacy Camera"
-    echo "  2. Verify camera connection to CSI port"
-    echo "  3. Reboot after enabling: sudo reboot"
-    echo "  4. Check with: vcgencmd get_camera"
+    echo "rpicam-apps is required for Raspberry Pi Camera Module 2"
+    echo "Install with: sudo apt-get install rpicam-apps"
+    echo ""
     exit 1
 fi
-print_success "Camera device found at $VIDEO_DEVICE"
+print_success "rpicam-vid found"
 
-# Check 3: User in video group
-print_info "Checking video group membership..."
-if ! groups | grep -q video; then
-    print_warning "User not in 'video' group"
-    echo "Run: sudo usermod -a -G video \$USER"
-    echo "Then logout and login again"
-    echo ""
-    echo "Continuing anyway (might work)..."
+# Check 3: Camera detection
+print_info "Checking camera detection..."
+if command -v vcgencmd &> /dev/null; then
+    CAMERA_STATUS=$(vcgencmd get_camera 2>&1)
+    if echo "$CAMERA_STATUS" | grep -q "detected=1"; then
+        print_success "Camera detected by vcgencmd"
+    else
+        print_warning "Camera not detected by vcgencmd"
+        echo "Status: $CAMERA_STATUS"
+        echo ""
+        echo "Trying to continue anyway..."
+    fi
 else
-    print_success "User in video group"
+    print_warning "vcgencmd not available (skip camera detection)"
 fi
 
-# Check 4: Camera permissions
-print_info "Checking camera permissions..."
-if [ ! -r "$VIDEO_DEVICE" ] || [ ! -w "$VIDEO_DEVICE" ]; then
-    print_warning "Camera permissions may be insufficient"
-    echo "You might need to run: sudo chmod 666 $VIDEO_DEVICE"
-    echo ""
-    echo "Continuing anyway..."
-else
-    print_success "Camera permissions OK"
-fi
-
-# Check 5: ROS2 environment
+# Check 4: ROS2 environment
 print_info "Checking ROS2 installation..."
 if ! command -v ros2 &> /dev/null; then
     print_error "ROS2 not found in PATH"
@@ -117,7 +110,7 @@ if ! command -v ros2 &> /dev/null; then
 fi
 print_success "ROS2 found"
 
-# Check 6: Network configuration
+# Check 5: Network configuration
 print_info "Checking network configuration..."
 if [ -z "$ROS_DOMAIN_ID" ]; then
     print_warning "ROS_DOMAIN_ID not set (should be 42)"
@@ -164,10 +157,11 @@ fi
 echo ""
 echo -e "${CYAN}═══ Launch Configuration ═══${NC}\n"
 
-print_info "Video Device: $VIDEO_DEVICE"
+print_info "Resolution: ${WIDTH}x${HEIGHT}"
+print_info "Frame Rate: ${FRAMERATE} FPS"
 print_info "JPEG Quality: $JPEG_QUALITY%"
-print_info "Launch File: camera_compressed.launch.py"
-print_info "Namespace: pi"
+print_info "Launch File: camera_rpicam.launch.py"
+print_info "Camera Driver: rpicam-vid (libcamera)"
 
 ################################################################################
 # Launch Camera Node
@@ -176,7 +170,7 @@ print_info "Namespace: pi"
 echo ""
 echo -e "${CYAN}═══ Starting Camera Node ═══${NC}\n"
 
-print_success "Launching camera with compressed image transport..."
+print_success "Launching camera with rpicam-vid (libcamera)..."
 echo ""
 echo -e "${YELLOW}Press Ctrl+C to stop${NC}"
 echo ""
@@ -184,8 +178,10 @@ echo "────────────────────────�
 echo ""
 
 # Launch with all parameters
-ros2 launch rpi_camera_package camera_compressed.launch.py \
-    video_device:=$VIDEO_DEVICE \
+ros2 launch rpi_camera_package camera_rpicam.launch.py \
+    width:=$WIDTH \
+    height:=$HEIGHT \
+    framerate:=$FRAMERATE \
     jpeg_quality:=$JPEG_QUALITY
 
 # Capture exit code
