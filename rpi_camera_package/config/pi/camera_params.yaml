@@ -7,7 +7,7 @@
     # Using larger resolution as Raspberry Pi Camera Module 2 native sensor is 3280x2464
     # Common working resolutions: [640, 480], [1280, 720], [1920, 1080]
     image_size: [1280, 720]
-    
+
     # RGB3 format works reliably with Pi Camera Module 2 via unicam driver
     # Other options: "MJPEG" (if supported), "RGB24", "BGR24"
     pixel_format: "RGB3"
