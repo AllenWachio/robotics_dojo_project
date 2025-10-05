@@ -163,16 +163,21 @@ class RPiCameraNode(Node):
         
         # Simple camera matrix (assuming no calibration)
         # You should calibrate your camera and replace these values
+        # K is the 3x3 camera intrinsic matrix flattened to 9 floats
+        focal_length = float(self.width)  # Rough estimate
+        cx = float(self.width / 2.0)
+        cy = float(self.height / 2.0)
+        
         info.k = [
-            self.width, 0.0, self.width / 2.0,
-            0.0, self.width, self.height / 2.0,
+            focal_length, 0.0, cx,
+            0.0, focal_length, cy,
             0.0, 0.0, 1.0
         ]
         info.d = [0.0, 0.0, 0.0, 0.0, 0.0]
         info.r = [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0]
         info.p = [
-            self.width, 0.0, self.width / 2.0, 0.0,
-            0.0, self.width, self.height / 2.0, 0.0,
+            focal_length, 0.0, cx, 0.0,
+            0.0, focal_length, cy, 0.0,
             0.0, 0.0, 1.0, 0.0
         ]
         
