@@ -16,7 +16,7 @@ def generate_launch_description():
             'baud_rate': 57600,
             'base_width': 0.208000,      # 20.8cm wheelbase
             'wheel_radius': 0.042500,    # 85mm diameter wheels
-            'encoder_ticks_per_rev': 870
+            'encoder_ticks_per_rev': 447
         }]
     )
     

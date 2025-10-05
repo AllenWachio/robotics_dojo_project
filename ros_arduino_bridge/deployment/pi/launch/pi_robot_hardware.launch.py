@@ -54,7 +54,7 @@ def generate_launch_description():
             # Calibrated robot parameters
             'base_width': 0.208000,      # 20.8cm wheelbase
             'wheel_radius': 0.042500,    # 85mm diameter wheels
-            'encoder_ticks_per_rev': 870, # Measured encoder ticks
+            'encoder_ticks_per_rev': 447, # Measured encoder ticks
             
             # Motion limits
             #'max_linear_speed': 0.5,     # m/s
