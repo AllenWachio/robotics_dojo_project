@@ -53,6 +53,16 @@ data_files.extend(add_data_files(
     os.path.join('share', package_name, 'models'),
     'rpi_camera_package/models/*.pth'))
 
+# Add shell scripts - Pi (install to lib directory for ros2 run)
+data_files.extend(add_data_files(
+    os.path.join('lib', package_name, 'pi'),
+    'scripts/pi/*.sh'))
+
+# Add shell scripts - Laptop (install to lib directory for ros2 run)
+data_files.extend(add_data_files(
+    os.path.join('lib', package_name, 'laptop'),
+    'scripts/laptop/*.sh'))
+
 setup(
     name=package_name,
     version='0.0.0',

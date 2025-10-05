@@ -1,6 +1,40 @@
 # 🚀 Quick Reference Card - Disease Detection
 
-## ⚡ Fast Commands
+## ⚡ Easiest Way: Shell Scripts (Recommended)
+
+### **Pi (Camera)**
+
+```bash
+cd ~/ros2_ws/src/rpi_camera_package/scripts/pi
+./run_camera.sh
+```
+
+### **Laptop - Color Detection**
+
+```bash
+cd ~/ros2_ws/src/rpi_camera_package/scripts/laptop
+./run_color_detection.sh
+```
+
+### **Laptop - Disease Detection**
+
+```bash
+cd ~/ros2_ws/src/rpi_camera_package/scripts/laptop
+./run_disease_detection.sh
+```
+
+### **Laptop - Both (Color + Disease)**
+
+```bash
+cd ~/ros2_ws/src/rpi_camera_package/scripts/laptop
+./run_full_processing.sh
+```
+
+> ✅ **Scripts include all pre-flight checks and error handling!**
+
+---
+
+## ⚡ Alternative: Direct Launch Commands
 
 ### **Pi (Camera)**
 
@@ -73,6 +107,18 @@ display:=false
 
 ---
 
+## 🎯 Why Use Shell Scripts?
+
+✅ **No parameters to remember** - All pre-configured  
+✅ **Pre-flight checks** - Verifies everything before launch  
+✅ **Colored output** - Easy to read error messages  
+✅ **Automatic setup** - Sources workspace, sets network config  
+✅ **Beginner-friendly** - Clear error messages with solutions
+
+See `scripts/README.md` for full documentation.
+
+---
+
 ## 📖 Documentation
 
 | File                                    | Purpose                |
@@ -80,6 +126,7 @@ display:=false
 | **README.md**                           | Main documentation     |
 | **DISEASE_DETECTION.md**                | ML usage guide ⭐      |
 | **QUICKSTART.md**                       | Quick commands         |
+| **scripts/README.md**                   | Shell scripts guide ⭐ |
 | **TESTING_CHECKLIST.md**                | Verification steps     |
 | **DISEASE_DETECTION_IMPLEMENTATION.md** | Implementation details |
 

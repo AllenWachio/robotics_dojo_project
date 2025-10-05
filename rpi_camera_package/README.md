@@ -181,7 +181,36 @@ source install/setup.bash
 
 ## 🚀 Usage
 
-### Quick Start
+### Quick Start (Easiest - Shell Scripts)
+
+#### On Raspberry Pi:
+
+```bash
+cd ~/ros2_ws/src/rpi_camera_package/scripts/pi
+./run_camera.sh
+```
+
+#### On Laptop:
+
+```bash
+cd ~/ros2_ws/src/rpi_camera_package/scripts/laptop
+
+# Option 1: Color detection only
+./run_color_detection.sh
+
+# Option 2: Disease detection only (ML-based)
+./run_disease_detection.sh
+
+# Option 3: BOTH color + disease detection (parallel processing)
+./run_full_processing.sh
+```
+
+> ✅ **Shell scripts include pre-flight checks, auto-setup, and colored error messages!**  
+> 📖 See [scripts/README.md](scripts/README.md) for full script documentation
+
+---
+
+### Alternative: Direct Launch Commands
 
 #### On Raspberry Pi:
 

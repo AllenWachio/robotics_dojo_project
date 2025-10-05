@@ -1,6 +1,35 @@
 # Quick Setup Guide - RPI Camera Package
 
-## 🚀 Quick Start
+## 🚀 Easiest Way: Shell Scripts (Recommended!)
+
+### **On Raspberry Pi:**
+
+```bash
+cd ~/ros2_ws/src/rpi_camera_package/scripts/pi
+./run_camera.sh
+```
+
+### **On Laptop:**
+
+```bash
+cd ~/ros2_ws/src/rpi_camera_package/scripts/laptop
+
+# Option 1: Color detection only
+./run_color_detection.sh
+
+# Option 2: Disease detection only (ML-based)
+./run_disease_detection.sh
+
+# Option 3: BOTH color + disease detection
+./run_full_processing.sh
+```
+
+> ✅ **Scripts include all pre-flight checks, error handling, and helpful messages!**
+> 📖 See `scripts/README.md` for full documentation
+
+---
+
+## 🚀 Alternative: Direct Launch Commands
 
 ### On Raspberry Pi (Terminal 1):
 
@@ -9,12 +38,6 @@
 source ~/ros2_ws/install/setup.bash
 
 # Launch camera with compression (RECOMMENDED for network)
-ros2 launch rpi_camera_package camera_publisher.launch.py pi
-```
-
-Or use the compressed version:
-
-```bash
 ros2 launch rpi_camera_package camera_compressed.launch.py pi
 ```
 
