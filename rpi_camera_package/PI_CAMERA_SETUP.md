@@ -58,6 +58,7 @@ export RMW_IMPLEMENTATION=rmw_fastrtps_cpp
 ```
 
 Then source it:
+
 ```bash
 source ~/.bashrc
 ```
@@ -72,6 +73,7 @@ cd ~/ros2_ws
 ```
 
 The script will:
+
 - Check all prerequisites
 - Configure the camera
 - Start publishing compressed images to `/camera/image_raw/compressed`
@@ -121,6 +123,7 @@ sudo killall rpicam-vid
 Edit camera parameters in: `config/pi/camera_params.yaml`
 
 Default settings (configured in run_camera.sh):
+
 - Resolution: 1280x720
 - Frame Rate: 15 FPS
 - JPEG Quality: 80%
@@ -169,6 +172,7 @@ Once camera is running on Pi, launch processing nodes on laptop:
 - **Network**: DDS with FastRTPS
 
 The rpicam approach is more reliable than v4l2 for Pi Camera Module because:
+
 - Native support for Pi Camera hardware
 - Better performance with hardware encoding
 - More stable with unicam driver
