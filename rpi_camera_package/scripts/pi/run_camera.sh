@@ -185,7 +185,6 @@ echo ""
 
 # Launch with all parameters
 ros2 launch rpi_camera_package camera_compressed.launch.py \
-    pi \
     video_device:=$VIDEO_DEVICE \
     jpeg_quality:=$JPEG_QUALITY
 

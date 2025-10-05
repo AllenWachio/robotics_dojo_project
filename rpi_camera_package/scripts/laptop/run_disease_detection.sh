@@ -244,7 +244,6 @@ echo ""
 
 # Launch with all parameters
 ros2 launch rpi_camera_package disease_detection.launch.py \
-    laptop \
     use_compressed:=$USE_COMPRESSED \
     display:=$DISPLAY_OUTPUT \
     inference_rate:=$INFERENCE_RATE \

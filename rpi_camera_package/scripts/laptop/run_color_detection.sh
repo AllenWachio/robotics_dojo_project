@@ -195,7 +195,6 @@ echo ""
 
 # Launch with all parameters
 ros2 launch rpi_camera_package color_detection.launch.py \
-    laptop \
     use_compressed:=$USE_COMPRESSED \
     display:=$DISPLAY_OUTPUT \
     min_area:=$MIN_AREA \

@@ -269,7 +269,6 @@ echo ""
 
 # Launch with all parameters
 ros2 launch rpi_camera_package full_processing.launch.py \
-    laptop \
     use_compressed:=$USE_COMPRESSED \
     display:=$DISPLAY_OUTPUT
 
