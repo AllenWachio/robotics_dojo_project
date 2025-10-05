@@ -368,17 +368,20 @@ class ROSArduinoBridge(Node):
         self.color_led_state = False
         self.get_logger().info("LED turned off")
 
-        # Calculate average and return
+        # Calculate average and identify color
         if samples:
             # Average each channel
             avg_r = sum(s[0] for s in samples) / len(samples)
             avg_g = sum(s[1] for s in samples) / len(samples)
             avg_b = sum(s[2] for s in samples) / len(samples)
             
-            color_str = f"R:{int(avg_r)} G:{int(avg_g)} B:{int(avg_b)} (from {len(samples)} samples)"
+            # Identify color name from averaged RGB
+            color_name = self._identify_color(int(avg_r), int(avg_g), int(avg_b))
+            
+            color_str = f"{color_name} | R:{int(avg_r)} G:{int(avg_g)} B:{int(avg_b)} (from {len(samples)} samples)"
             response.success = True
             response.message = color_str
-            self.get_logger().info(f"Average color: {color_str}")
+            self.get_logger().info(f"Detected color: {color_str}")
         else:
             response.success = False
             response.message = "No valid color samples received from sensor"
@@ -411,6 +414,90 @@ class ROSArduinoBridge(Node):
             except (ValueError, IndexError):
                 pass
         return None
+
+    def _identify_color(self, r, g, b):
+        """Identify color name from RGB values (16-bit sensor, 0-65535 range)"""
+        # Normalize to 0-1 range for easier comparison
+        r_norm = r / 65535.0
+        g_norm = g / 65535.0
+        b_norm = b / 65535.0
+        
+        # Calculate total brightness
+        brightness = (r_norm + g_norm + b_norm) / 3.0
+        
+        # Very low brightness = black
+        if brightness < 0.15:
+            return "Black"
+        
+        # Very high brightness with balanced RGB = white
+        if brightness > 0.7:
+            rgb_diff = max(r_norm, g_norm, b_norm) - min(r_norm, g_norm, b_norm)
+            if rgb_diff < 0.15:
+                return "White"
+        
+        # Find dominant color channel
+        max_val = max(r_norm, g_norm, b_norm)
+        
+        # Calculate color ratios (how much more dominant the max channel is)
+        threshold = 0.15  # Minimum difference to be considered dominant
+        
+        # Red dominant
+        if r_norm == max_val and r_norm > g_norm + threshold and r_norm > b_norm + threshold:
+            if g_norm > b_norm + 0.1:
+                return "Orange" if g_norm > 0.3 else "Red-Orange"
+            elif b_norm > g_norm + 0.1:
+                return "Magenta"
+            else:
+                return "Red"
+        
+        # Green dominant
+        elif g_norm == max_val and g_norm > r_norm + threshold and g_norm > b_norm + threshold:
+            if r_norm > b_norm + 0.1:
+                return "Yellow-Green" if r_norm > 0.3 else "Green"
+            elif b_norm > r_norm + 0.1:
+                return "Cyan"
+            else:
+                return "Green"
+        
+        # Blue dominant
+        elif b_norm == max_val and b_norm > r_norm + threshold and b_norm > g_norm + threshold:
+            if r_norm > g_norm + 0.1:
+                return "Purple" if r_norm > 0.3 else "Blue-Purple"
+            elif g_norm > r_norm + 0.1:
+                return "Cyan-Blue"
+            else:
+                return "Blue"
+        
+        # Mixed colors (no clear dominant channel)
+        # Yellow: red and green high, blue low
+        if r_norm > 0.4 and g_norm > 0.4 and b_norm < r_norm - 0.2:
+            return "Yellow"
+        
+        # Cyan: green and blue high, red low
+        if g_norm > 0.4 and b_norm > 0.4 and r_norm < g_norm - 0.2:
+            return "Cyan"
+        
+        # Magenta: red and blue high, green low
+        if r_norm > 0.4 and b_norm > 0.4 and g_norm < r_norm - 0.2:
+            return "Magenta"
+        
+        # Gray (balanced but not too bright or dark)
+        rgb_diff = max(r_norm, g_norm, b_norm) - min(r_norm, g_norm, b_norm)
+        if rgb_diff < 0.15:
+            if brightness < 0.3:
+                return "Dark Gray"
+            elif brightness > 0.5:
+                return "Light Gray"
+            else:
+                return "Gray"
+        
+        # Default: return dominant color with brightness qualifier
+        if max_val == r_norm:
+            return "Light Red" if brightness > 0.5 else "Dark Red"
+        elif max_val == g_norm:
+            return "Light Green" if brightness > 0.5 else "Dark Green"
+        else:
+            return "Light Blue" if brightness > 0.5 else "Dark Blue"
 
     def read_color_sensor(self):
         """Read color sensor data periodically"""
