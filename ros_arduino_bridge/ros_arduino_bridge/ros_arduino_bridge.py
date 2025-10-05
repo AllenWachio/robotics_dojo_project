@@ -6,10 +6,12 @@ from geometry_msgs.msg import Twist
 from sensor_msgs.msg import Imu, Range, JointState
 from nav_msgs.msg import Odometry
 from std_msgs.msg import Float32, Int32, String, ColorRGBA, Bool
+from std_srvs.srv import Trigger
 import serial
 import threading
 import time
 import math
+import re
 from tf2_ros import TransformBroadcaster
 from geometry_msgs.msg import TransformStamped, Quaternion
 import select
@@ -115,6 +117,11 @@ class ROSArduinoBridge(Node):
         )
         self.color_led_sub = self.create_subscription(
             Bool, "color_sensor/led", self.color_led_callback, 10
+        )
+
+        # Services
+        self.get_color_srv = self.create_service(
+            Trigger, "get_color", self.handle_get_color
         )
 
         # TF Broadcaster
@@ -326,12 +333,91 @@ class ROSArduinoBridge(Node):
             debug_msg.data = f"Color LED: {'ON' if msg.data else 'OFF'}, cmd='{command}'"
             self.color_sensor_raw_pub.publish(debug_msg)
 
+    def handle_get_color(self, request, response):
+        """Service: Turn on LED, sample color multiple times, average, turn off LED, return result."""
+        self.get_logger().info("Service get_color called: turning LED on")
+        
+        # Turn on LED
+        self.color_led_state = True
+        if not self.send_command("v 1"):
+            response.success = False
+            response.message = "Failed to turn on LED (serial error)"
+            return response
+        
+        time.sleep(0.2)  # Let LED stabilize
+
+        # Collect multiple samples
+        samples = []
+        for i in range(5):
+            if self.send_command("v"):  # Request color reading
+                start = time.time()
+                # Wait up to 0.3s for a response
+                while time.time() - start < 0.3:
+                    line = self.read_serial_line()
+                    if line:
+                        vals = self._parse_color_line(line)
+                        if vals:
+                            samples.append(vals)
+                            self.get_logger().debug(f"Sample {i+1}: R={vals[0]} G={vals[1]} B={vals[2]}")
+                            break
+                    time.sleep(0.02)
+            time.sleep(0.05)  # Small delay between samples
+
+        # Turn off LED
+        self.send_command("v 0")
+        self.color_led_state = False
+        self.get_logger().info("LED turned off")
+
+        # Calculate average and return
+        if samples:
+            # Average each channel
+            avg_r = sum(s[0] for s in samples) / len(samples)
+            avg_g = sum(s[1] for s in samples) / len(samples)
+            avg_b = sum(s[2] for s in samples) / len(samples)
+            
+            color_str = f"R:{int(avg_r)} G:{int(avg_g)} B:{int(avg_b)} (from {len(samples)} samples)"
+            response.success = True
+            response.message = color_str
+            self.get_logger().info(f"Average color: {color_str}")
+        else:
+            response.success = False
+            response.message = "No valid color samples received from sensor"
+            self.get_logger().warning("No valid color samples")
+        
+        return response
+
+    def _parse_color_line(self, line):
+        """Parse color sensor response line and return [R, G, B] or None"""
+        s = line.strip()
+        
+        # Try multiple formats:
+        # Format 1: "COLOR R G B" or "Color: R G B"
+        # Format 2: "R G B" (three space-separated integers)
+        # Format 3: "R:value G:value B:value"
+        
+        # Remove common prefixes
+        s = re.sub(r'^(COLOR|Color)\s*:?\s*', '', s, flags=re.IGNORECASE)
+        
+        # Try to extract three integers with flexible separators
+        match = re.search(r'(\d+)[^\d]+(\d+)[^\d]+(\d+)', s)
+        if match:
+            try:
+                r = int(match.group(1))
+                g = int(match.group(2))
+                b = int(match.group(3))
+                # Sanity check: reject values that are clearly not color sensor data
+                if 0 <= r <= 65535 and 0 <= g <= 65535 and 0 <= b <= 65535:
+                    return [r, g, b]
+            except (ValueError, IndexError):
+                pass
+        return None
+
     def read_color_sensor(self):
         """Read color sensor data periodically"""
         if not self.serial or not self.serial.is_open:
             return
         
-        # Send color read command
+        # Send color read command (v command reads color data)
         if self.send_command("v"):
             start = time.time()
             # Wait up to 0.5s for response
@@ -339,30 +425,31 @@ class ROSArduinoBridge(Node):
                 line = self.read_serial_line()
                 if not line:
                     continue
-                try:
-                    # Expected format: "R G B" (space-separated integers)
-                    values = list(map(int, line.split()))
-                    if len(values) == 3:
-                        self.color_rgb = values
-                        
-                        # Publish normalized color data (0-1 range)
-                        color_msg = ColorRGBA()
-                        # Normalize to 0-1 range (assuming 16-bit values from TCS34725)
-                        color_msg.r = float(values[0]) / 65535.0
-                        color_msg.g = float(values[1]) / 65535.0
-                        color_msg.b = float(values[2]) / 65535.0
-                        color_msg.a = 1.0
-                        
-                        self.color_sensor_pub.publish(color_msg)
-                        
-                        # Publish raw debug data
-                        raw_msg = String()
-                        raw_msg.data = f"R:{values[0]} G:{values[1]} B:{values[2]}"
-                        self.color_sensor_raw_pub.publish(raw_msg)
-                        
-                        self.get_logger().debug(f"Color RGB: {values}")
-                        break
-                except ValueError:
+                
+                # Try to parse the line as color data
+                values = self._parse_color_line(line)
+                if values:
+                    self.color_rgb = values
+                    
+                    # Publish normalized color data (0-1 range)
+                    color_msg = ColorRGBA()
+                    # Normalize to 0-1 range (assuming 16-bit values from TCS34725)
+                    color_msg.r = float(values[0]) / 65535.0
+                    color_msg.g = float(values[1]) / 65535.0
+                    color_msg.b = float(values[2]) / 65535.0
+                    color_msg.a = 1.0
+                    
+                    self.color_sensor_pub.publish(color_msg)
+                    
+                    # Publish raw debug data
+                    raw_msg = String()
+                    raw_msg.data = f"R:{values[0]} G:{values[1]} B:{values[2]}"
+                    self.color_sensor_raw_pub.publish(raw_msg)
+                    
+                    self.get_logger().debug(f"Color RGB: {values}")
+                    break
+                else:
+                    # Log unrecognized lines at debug level
                     self.get_logger().debug(f"Ignoring non-color line: '{line}'")
                     continue
 
