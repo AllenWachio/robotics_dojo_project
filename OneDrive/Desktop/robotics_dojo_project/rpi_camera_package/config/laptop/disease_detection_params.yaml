@@ -1,0 +1,23 @@
+/disease_detection_node:
+  ros__parameters:
+    # Image subscription settings
+    use_compressed: true # Subscribe to compressed images (recommended for network)
+
+    # Display and output settings
+    display_output: true # Show annotated image in OpenCV window
+    publish_annotated: true # Publish annotated images to /disease_detection/annotated_image
+
+    # Inference settings
+    inference_rate:
+      1.0 # Inference frequency in Hz (1.0 = once per second)
+      # Lower values save CPU (e.g., 0.5 = every 2 seconds)
+      # Higher values = more frequent detection (e.g., 2.0 = twice per second)
+
+    confidence_threshold:
+      0.0 # Minimum confidence to report (0.0-1.0)
+      # 0.0 = report all detections
+      # 0.5 = only report if 50%+ confident
+      # 0.8 = only report if 80%+ confident
+
+    # Model settings
+    model_name: "model_ft_gpu.pth" # PyTorch model filename in models/ directory

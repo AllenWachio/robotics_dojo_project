@@ -1,0 +1,39 @@
+/camera/camera:
+  ros__parameters:
+    # Camera device
+    video_device: "/dev/video0"
+
+    # Image format
+    # Using larger resolution as Raspberry Pi Camera Module 2 native sensor is 3280x2464
+    # Common working resolutions: [640, 480], [1280, 720], [1920, 1080]
+    image_size: [1280, 720]
+
+    # RGB3 format works reliably with Pi Camera Module 2 via unicam driver
+    # Other options: "MJPEG" (if supported), "RGB24", "BGR24"
+    pixel_format: "RGB3"
+
+    # Frame rate (denominator, numerator) - 15 FPS for better stability
+    # Lower frame rate helps with network transmission and processing
+    time_per_frame: [1, 15]
+
+    # Camera settings
+    camera_frame_id: "camera_optical_frame"
+    camera_name: "rpi_camera"
+
+    # Auto settings (-1 means auto)
+    brightness: -1 # Auto
+    contrast: -1 # Auto
+    saturation: -1 # Auto
+    sharpness: -1 # Auto
+    gain: -1 # Auto
+
+    # Exposure settings
+    auto_exposure: 1 # 1 = auto, 0 = manual
+    exposure: 100
+
+    # White balance
+    auto_white_balance: true
+    white_balance: 4000
+
+    # Camera info URL (optional - for camera calibration)
+    # camera_info_url: "file:///home/pi/camera_calibration.yaml"
