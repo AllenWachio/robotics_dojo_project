@@ -25,7 +25,7 @@ class ROSArduinoBridge(Node):
         self.declare_parameter("base_width", 0.208000)  # Distance between left/right wheels
         self.declare_parameter("wheel_radius", 0.0425)
         self.declare_parameter(
-            "encoder_ticks_per_rev", 447
+            "encoder_ticks_per_rev", 373
         )  # The measured ticks per revolution
 
         # Max speeds for mapping to PWM
