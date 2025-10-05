@@ -4,11 +4,17 @@
     video_device: "/dev/video0"
 
     # Image format
-    image_size: [640, 480]
-    pixel_format: "YUYV" # or "MJPEG" for better performance if supported
+    # Using larger resolution as Raspberry Pi Camera Module 2 native sensor is 3280x2464
+    # Common working resolutions: [640, 480], [1280, 720], [1920, 1080]
+    image_size: [1280, 720]
+    
+    # RGB3 format works reliably with Pi Camera Module 2 via unicam driver
+    # Other options: "MJPEG" (if supported), "RGB24", "BGR24"
+    pixel_format: "RGB3"
 
-    # Frame rate (denominator, numerator) - 30 FPS
-    time_per_frame: [1, 30]
+    # Frame rate (denominator, numerator) - 15 FPS for better stability
+    # Lower frame rate helps with network transmission and processing
+    time_per_frame: [1, 15]
 
     # Camera settings
     camera_frame_id: "camera_optical_frame"
