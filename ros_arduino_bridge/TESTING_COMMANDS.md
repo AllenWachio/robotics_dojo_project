@@ -147,6 +147,40 @@ ros2 topic echo /color_sensor/rgb
 # Get one reading only
 ros2 topic echo /color_sensor/raw --once
 ros2 topic echo /color_sensor/rgb --once
+
+# NEW: Get color with automatic LED control and color name
+ros2 service call /get_color std_srvs/srv/Trigger
+```
+
+### Troubleshoot Low Color Values
+
+If you get very low RGB values (< 100), check:
+
+```bash
+# 1. Verify LED turns on
+ros2 topic pub --once /color_sensor/led std_msgs/msg/Bool "data: true"
+# Look at the sensor - LED should be visibly on
+
+# 2. Check what Arduino is sending (need serial access on Pi)
+# On Pi, stop the bridge and connect to serial:
+# screen /dev/serial/by-id/usb-1a86_USB_Serial-if00-port0 57600
+# Type 'v 1' (turn LED on), then 'v' (read color)
+# You should see RGB values printed by Arduino
+
+# 3. Check sensor wiring and power
+# - VIN to 3.3V or 5V
+# - GND to GND  
+# - SDA to SDA (I2C data)
+# - SCL to SCL (I2C clock)
+# - LED pin if using external LED control
+
+# 4. Verify sensor I2C address (usually 0x29 for TCS34725)
+# On Pi: sudo i2cdetect -y 1
+# Should see '29' in the grid
+
+# 5. Check Arduino code sensor initialization
+# - Integration time (longer = brighter readings)
+# - Gain setting (higher = more sensitive)
 ```
 
 ### Test Color Detection

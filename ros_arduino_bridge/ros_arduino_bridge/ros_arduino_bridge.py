@@ -416,88 +416,105 @@ class ROSArduinoBridge(Node):
         return None
 
     def _identify_color(self, r, g, b):
-        """Identify color name from RGB values (16-bit sensor, 0-65535 range)"""
-        # Normalize to 0-1 range for easier comparison
-        r_norm = r / 65535.0
-        g_norm = g / 65535.0
-        b_norm = b / 65535.0
+        """Identify color name from RGB values (16-bit sensor, 0-65535 range)
+        Optimized for low-light/low-gain sensors with values typically < 100
+        """
+        # Log raw values for debugging
+        self.get_logger().debug(f"_identify_color: raw R={r}, G={g}, B={b}")
         
-        # Calculate total brightness
-        brightness = (r_norm + g_norm + b_norm) / 3.0
+        # Check if we got any meaningful reading
+        total = r + g + b
+        if total < 3:  # Less than 1 per channel = sensor error
+            self.get_logger().warning("Color sensor returned near-zero values - check sensor!")
+            return "Error: No reading"
         
-        # Very low brightness = black
-        if brightness < 0.15:
+        # For low-value sensors (typical with 50MS integration, 4X gain),
+        # use RELATIVE ratios instead of absolute brightness
+        max_val = max(r, g, b)
+        min_val = min(r, g, b)
+        
+        # Avoid division by zero
+        if max_val == 0:
             return "Black"
         
-        # Very high brightness with balanced RGB = white
-        if brightness > 0.7:
-            rgb_diff = max(r_norm, g_norm, b_norm) - min(r_norm, g_norm, b_norm)
-            if rgb_diff < 0.15:
-                return "White"
+        # Calculate normalized ratios (0-1 range relative to max reading)
+        r_ratio = r / max_val
+        g_ratio = g / max_val
+        b_ratio = b / max_val
         
-        # Find dominant color channel
-        max_val = max(r_norm, g_norm, b_norm)
+        # Calculate color difference (how far apart the channels are)
+        color_diff = (max_val - min_val) / max_val
         
-        # Calculate color ratios (how much more dominant the max channel is)
-        threshold = 0.15  # Minimum difference to be considered dominant
+        self.get_logger().debug(
+            f"Ratios: R={r_ratio:.2f} G={g_ratio:.2f} B={b_ratio:.2f} "
+            f"diff={color_diff:.2f} total={total}"
+        )
         
-        # Red dominant
-        if r_norm == max_val and r_norm > g_norm + threshold and r_norm > b_norm + threshold:
-            if g_norm > b_norm + 0.1:
-                return "Orange" if g_norm > 0.3 else "Red-Orange"
-            elif b_norm > g_norm + 0.1:
+        # Very low total with low difference = Black/Dark Gray
+        if total < 20 and color_diff < 0.3:
+            return "Black"
+        
+        # Low color difference = grayscale (all channels similar)
+        if color_diff < 0.15:
+            if total < 15:
+                return "Black"
+            elif total < 30:
+                return "Dark Gray"
+            elif total < 50:
+                return "Gray"
+            else:
+                return "Light Gray" if total < 80 else "White"
+        
+        # Identify dominant color based on which channel is highest
+        dominant_threshold = 0.85  # Channel needs to be 85% or higher to be "dominant"
+        
+        # Red is dominant
+        if r >= max_val * 0.95:  # R is clearly the highest
+            if g_ratio > 0.6:  # Significant green component
+                return "Orange" if g_ratio > 0.75 else "Red-Orange"
+            elif b_ratio > 0.6:  # Significant blue component
                 return "Magenta"
             else:
                 return "Red"
         
-        # Green dominant
-        elif g_norm == max_val and g_norm > r_norm + threshold and g_norm > b_norm + threshold:
-            if r_norm > b_norm + 0.1:
-                return "Yellow-Green" if r_norm > 0.3 else "Green"
-            elif b_norm > r_norm + 0.1:
-                return "Cyan"
+        # Green is dominant
+        elif g >= max_val * 0.95:
+            if r_ratio > 0.6:  # Significant red component
+                return "Yellow" if r_ratio > 0.8 else "Yellow-Green"
+            elif b_ratio > 0.6:  # Significant blue component
+                return "Cyan" if b_ratio > 0.8 else "Cyan-Green"
             else:
                 return "Green"
         
-        # Blue dominant
-        elif b_norm == max_val and b_norm > r_norm + threshold and b_norm > g_norm + threshold:
-            if r_norm > g_norm + 0.1:
-                return "Purple" if r_norm > 0.3 else "Blue-Purple"
-            elif g_norm > r_norm + 0.1:
-                return "Cyan-Blue"
+        # Blue is dominant
+        elif b >= max_val * 0.95:
+            if r_ratio > 0.6:  # Significant red component
+                return "Purple" if r_ratio > 0.75 else "Blue-Purple"
+            elif g_ratio > 0.6:  # Significant green component
+                return "Cyan-Blue" if g_ratio > 0.75 else "Blue"
             else:
                 return "Blue"
         
-        # Mixed colors (no clear dominant channel)
-        # Yellow: red and green high, blue low
-        if r_norm > 0.4 and g_norm > 0.4 and b_norm < r_norm - 0.2:
+        # Mixed colors (two channels high, one low)
+        # Yellow: R and G both high, B low
+        if r_ratio > 0.85 and g_ratio > 0.85 and b_ratio < 0.6:
             return "Yellow"
         
-        # Cyan: green and blue high, red low
-        if g_norm > 0.4 and b_norm > 0.4 and r_norm < g_norm - 0.2:
+        # Cyan: G and B both high, R low
+        if g_ratio > 0.85 and b_ratio > 0.85 and r_ratio < 0.6:
             return "Cyan"
         
-        # Magenta: red and blue high, green low
-        if r_norm > 0.4 and b_norm > 0.4 and g_norm < r_norm - 0.2:
+        # Magenta: R and B both high, G low
+        if r_ratio > 0.85 and b_ratio > 0.85 and g_ratio < 0.6:
             return "Magenta"
         
-        # Gray (balanced but not too bright or dark)
-        rgb_diff = max(r_norm, g_norm, b_norm) - min(r_norm, g_norm, b_norm)
-        if rgb_diff < 0.15:
-            if brightness < 0.3:
-                return "Dark Gray"
-            elif brightness > 0.5:
-                return "Light Gray"
-            else:
-                return "Gray"
-        
-        # Default: return dominant color with brightness qualifier
-        if max_val == r_norm:
-            return "Light Red" if brightness > 0.5 else "Dark Red"
-        elif max_val == g_norm:
-            return "Light Green" if brightness > 0.5 else "Dark Green"
+        # If we can't determine clearly, return the dominant color with qualifier
+        if r == max_val:
+            return "Reddish" if color_diff > 0.3 else "Light Red"
+        elif g == max_val:
+            return "Greenish" if color_diff > 0.3 else "Light Green"
         else:
-            return "Light Blue" if brightness > 0.5 else "Dark Blue"
+            return "Bluish" if color_diff > 0.3 else "Light Blue"
 
     def read_color_sensor(self):
         """Read color sensor data periodically"""
@@ -532,6 +549,13 @@ class ROSArduinoBridge(Node):
                     raw_msg = String()
                     raw_msg.data = f"R:{values[0]} G:{values[1]} B:{values[2]}"
                     self.color_sensor_raw_pub.publish(raw_msg)
+                    
+                    # Warn if values are suspiciously low
+                    if max(values) < 100:
+                        self.get_logger().warning(
+                            f"Color values very low: R={values[0]} G={values[1]} B={values[2]}. "
+                            "Check sensor wiring, power, or Arduino 'v' command response"
+                        )
                     
                     self.get_logger().debug(f"Color RGB: {values}")
                     break
