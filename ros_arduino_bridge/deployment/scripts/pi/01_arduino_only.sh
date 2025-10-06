@@ -1,11 +1,25 @@
 #!/bin/bash
 
-# RASPBERRY PI SCRIPT - Arduino Bridge Only
-# This script launches just the Arduino interface and robot state publisher
+# RASPBERRY PI SCRIPT - Arduino Bridge with Optional EKF Sensor Fusion
+# This script launches the Arduino interface and robot state publisher
+# Optional: Enable EKF sensor fusion to correct wheel slippage
 # Run this in one terminal, then launch LiDAR separately
 
-echo "Starting Arduino Bridge and Robot State Publisher..."
-echo "This handles only Arduino communication and TF publishing"
+# Usage:
+#   ./01_arduino_only.sh          # Without EKF (default)
+#   ./01_arduino_only.sh --ekf    # With EKF sensor fusion
+
+# Check for EKF flag
+USE_EKF=false
+if [ "$1" == "--ekf" ] || [ "$1" == "-e" ]; then
+    USE_EKF=true
+    echo "Starting Arduino Bridge with EKF Sensor Fusion..."
+    echo "This fuses wheel encoders + IMU for accurate odometry"
+else
+    echo "Starting Arduino Bridge and Robot State Publisher..."
+    echo "This handles Arduino communication and TF publishing"
+    echo "(Add --ekf flag to enable sensor fusion)"
+fi
 echo ""
 
 # Source the workspace
@@ -41,5 +55,20 @@ source ~/ros2_ws/install/setup.bash
 echo ""
 echo "Starting Arduino bridge nodes..."
 
-# Launch only Arduino components using package launch file
-ros2 launch ros_arduino_bridge arduino_only.launch.py arduino_port:="$ARDUINO_PORT"
+# Launch Arduino components with or without EKF
+if [ "$USE_EKF" = true ]; then
+    echo "   Mode: EKF Sensor Fusion ENABLED"
+    echo "   - Arduino bridge publishes: /odom (raw), /imu/data"
+    echo "   - EKF publishes: /odometry/filtered (fused), TF transform"
+    echo ""
+    ros2 launch ros_arduino_bridge arduino_only.launch.py \
+        arduino_port:="$ARDUINO_PORT" \
+        use_ekf:=true
+else
+    echo "   Mode: Standard (no EKF)"
+    echo "   - Arduino bridge publishes: /odom, TF transform"
+    echo ""
+    ros2 launch ros_arduino_bridge arduino_only.launch.py \
+        arduino_port:="$ARDUINO_PORT" \
+        use_ekf:=false
+fi

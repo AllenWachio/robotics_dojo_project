@@ -1,23 +1,36 @@
 from launch import LaunchDescription
 from launch_ros.actions import Node
-from launch.substitutions import PathJoinSubstitution, Command
+from launch.substitutions import PathJoinSubstitution, Command, LaunchConfiguration
 from launch_ros.substitutions import FindPackageShare
 from launch.actions import DeclareLaunchArgument
-from launch.substitutions import LaunchConfiguration
+from launch.conditions import IfCondition, UnlessCondition
+import os
 
 def generate_launch_description():
     """
-    RASPBERRY PI ARDUINO-ONLY LAUNCH
+    RASPBERRY PI ARDUINO-ONLY LAUNCH (with optional EKF)
     
-    This launch file runs only:
-    - Arduino communication (odometry, motor control)
+    This launch file runs:
+    - Arduino communication (odometry, motor control, IMU)
     - Robot state publishing (TF tree)
+    - [Optional] EKF sensor fusion (fuses encoders + IMU)
+    
+    Usage:
+        # Without EKF (default):
+        ros2 launch ros_arduino_bridge arduino_only.launch.py
+        
+        # With EKF sensor fusion:
+        ros2 launch ros_arduino_bridge arduino_only.launch.py use_ekf:=true
     
     LiDAR is launched separately to avoid conflicts
     """
     
-    # Launch arguments - using device ID for consistent identification
+    # Get package path for config files
+    pkg_share = FindPackageShare('ros_arduino_bridge')
+    
+    # Launch arguments
     arduino_port = LaunchConfiguration('arduino_port', default='/dev/serial/by-id/usb-1a86_USB_Serial-if00-port0')
+    use_ekf = LaunchConfiguration('use_ekf', default='false')
     
     # Robot description path
     urdf_path = PathJoinSubstitution([
@@ -38,7 +51,15 @@ def generate_launch_description():
         }]
     )
 
+    # EKF config path
+    ekf_config_path = PathJoinSubstitution([
+        pkg_share,
+        'config', 'ekf_config.yaml'
+    ])
+
     # Arduino Bridge - core robot interface
+    # When using EKF: publish_tf is disabled (EKF will handle TF)
+    # When not using EKF: publish_tf is enabled (bridge handles TF)
     arduino_bridge = Node(
         package='ros_arduino_bridge',
         executable='ros_arduino_bridge',
@@ -57,14 +78,37 @@ def generate_launch_description():
             # Frame names
             'odom_frame': 'odom',
             'base_frame': 'base_link',
+            
+            # TF publishing control (conditional based on use_ekf)
+            # If using EKF, disable bridge TF (EKF will publish it)
+            # If not using EKF, enable bridge TF
+            'publish_tf': UnlessCondition(use_ekf),
         }]
+    )
+    
+    # EKF Node - sensor fusion (only launched when use_ekf=true)
+    # Fuses wheel encoders (/odom) + IMU (/imu/data) → /odometry/filtered
+    ekf_node = Node(
+        package='robot_localization',
+        executable='ekf_node',
+        name='ekf_filter_node',
+        output='screen',
+        parameters=[ekf_config_path],
+        condition=IfCondition(use_ekf)
     )
 
     return LaunchDescription([
-        DeclareLaunchArgument('arduino_port', default_value=arduino_port,
+        # Launch arguments
+        DeclareLaunchArgument('arduino_port', 
+                             default_value='/dev/serial/by-id/usb-1a86_USB_Serial-if00-port0',
                              description='Arduino serial port (device ID)'),
+        DeclareLaunchArgument('use_ekf',
+                             default_value='false',
+                             description='Enable EKF sensor fusion (true/false)'),
         
+        # Nodes
         robot_state_publisher,
         arduino_bridge,
+        ekf_node,  # Only launches if use_ekf=true
         # NO LIDAR - Launch separately
     ])

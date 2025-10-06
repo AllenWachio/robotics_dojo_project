@@ -11,11 +11,20 @@ This launch file:
 2. Loads configuration from ekf_config.yaml
 3. Subscribes to /odom (wheels) and /imu/data (IMU)
 4. Publishes fused odometry to /odometry/filtered
+5. EKF publishes TF transform (odom → base_link)
 
 Prerequisites:
-- ros_arduino_bridge node must be running (provides /odom and /imu/data)
+- ros_arduino_bridge node must be running with publish_tf:=false
+  (to avoid TF conflicts - EKF will publish the transform)
 - robot_localization package must be installed:
     sudo apt install ros-humble-robot-localization
+
+Example full launch:
+    # Terminal 1: Arduino bridge (with TF disabled)
+    ros2 launch ros_arduino_bridge arduino_bridge.py publish_tf:=false
+    
+    # Terminal 2: EKF sensor fusion
+    ros2 launch ros_arduino_bridge sensor_fusion.launch.py
 """
 
 import os

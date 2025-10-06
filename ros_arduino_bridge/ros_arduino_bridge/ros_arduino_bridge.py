@@ -36,6 +36,9 @@ class ROSArduinoBridge(Node):
 
         self.declare_parameter("odom_frame", "odom")
         self.declare_parameter("base_frame", "base_link")
+        
+        # TF publishing control (disable when using EKF for sensor fusion)
+        self.declare_parameter("publish_tf", True)
 
         # Get parameters
         self.serial_port = self.get_parameter("serial_port").value
@@ -48,6 +51,8 @@ class ROSArduinoBridge(Node):
         # Frames
         self.odom_frame = self.get_parameter("odom_frame").value
         self.base_frame = self.get_parameter("base_frame").value
+        # TF control
+        self.publish_tf_enabled = self.get_parameter("publish_tf").value
 
         # Serial communication
         self.serial = None
@@ -290,7 +295,7 @@ class ROSArduinoBridge(Node):
         
         try:
             imu_msg.header.stamp = self.get_clock().now().to_msg()
-            imu_msg.header.frame_id = 'imu_link'  # Use imu_link frame
+            imu_msg.header.frame_id = 'base_link'  # IMU mounted at robot base
             self.imu_pub.publish(imu_msg)
             self.get_logger().debug(
                 f"IMU: yaw={yaw_deg:.2f}° pitch={pitch_deg:.2f}° roll={roll_deg:.2f}° | "
@@ -795,10 +800,11 @@ class ROSArduinoBridge(Node):
 
         # Check if the change in encoder counts is below the threshold
         if all(abs(tick) < encoder_threshold for tick in delta_ticks):
-            # Robot is stationary - publish TF and odometry with zero velocity
-            # This ensures the TF tree is always connected even when not moving
+            # Robot is stationary - publish odometry with zero velocity
+            # Publish TF only if not using EKF (EKF will publish TF when enabled)
             self.publish_odometry(0.0, 0.0, current_time)
-            self.publish_tf(current_time)
+            if self.publish_tf_enabled:
+                self.publish_tf(current_time)
             self.last_odom_update = current_time
             return
 
@@ -831,15 +837,16 @@ class ROSArduinoBridge(Node):
         # Publish odometry
         self.publish_odometry(linear_velocity, angular_velocity, current_time)
 
-        # Publish TF
-        self.publish_tf(current_time)
+        # Publish TF (only if not using EKF - EKF will publish TF when enabled)
+        if self.publish_tf_enabled:
+            self.publish_tf(current_time)
 
         # Update last values
         self.last_encoder_counts = self.encoder_counts.copy()
         self.last_odom_update = current_time
 
     def publish_odometry(self, linear_vel, angular_vel, timestamp):
-        """Publish odometry message"""
+        """Publish odometry message with covariance for EKF sensor fusion"""
         odom_msg = Odometry()
         odom_msg.header.stamp = timestamp.to_msg()
         odom_msg.header.frame_id = self.odom_frame
@@ -858,9 +865,32 @@ class ROSArduinoBridge(Node):
         q.w = math.cos(self.odom_theta / 2)
         odom_msg.pose.pose.orientation = q
 
+        # Set pose covariance (6x6 matrix, row-major)
+        # [x, y, z, rotation about X, rotation about Y, rotation about Z]
+        # For skid-steer: encoders good for position, BAD for rotation (wheels slip!)
+        odom_msg.pose.covariance = [
+            0.01,  0.0,   0.0,  0.0,  0.0,  0.0,   # x variance (encoders good)
+            0.0,   0.01,  0.0,  0.0,  0.0,  0.0,   # y variance (encoders good)
+            0.0,   0.0,   0.01, 0.0,  0.0,  0.0,   # z variance (not used in 2D)
+            0.0,   0.0,   0.0,  0.01, 0.0,  0.0,   # roll variance (not used in 2D)
+            0.0,   0.0,   0.0,  0.0,  0.01, 0.0,   # pitch variance (not used in 2D)
+            0.0,   0.0,   0.0,  0.0,  0.0,  0.5    # yaw variance (HIGH - wheels slip!)
+        ]
+
         # Set velocity
         odom_msg.twist.twist.linear.x = linear_vel
         odom_msg.twist.twist.angular.z = angular_vel
+
+        # Set twist covariance (6x6 matrix, row-major)
+        # [vx, vy, vz, rotation rate about X, rotation rate about Y, rotation rate about Z]
+        odom_msg.twist.covariance = [
+            0.01,  0.0,   0.0,  0.0,  0.0,  0.0,   # vx variance (encoders good)
+            0.0,   0.01,  0.0,  0.0,  0.0,  0.0,   # vy variance (encoders good)
+            0.0,   0.0,   0.01, 0.0,  0.0,  0.0,   # vz variance (not used)
+            0.0,   0.0,   0.0,  0.01, 0.0,  0.0,   # vroll variance (not used)
+            0.0,   0.0,   0.0,  0.0,  0.01, 0.0,   # vpitch variance (not used)
+            0.0,   0.0,   0.0,  0.0,  0.0,  0.1    # vyaw variance (medium - wheels slip)
+        ]
 
         self.odom_pub.publish(odom_msg)
 
