@@ -1,9 +1,9 @@
 from launch import LaunchDescription
 from launch_ros.actions import Node
-from launch.substitutions import PathJoinSubstitution, Command, LaunchConfiguration
+from launch.substitutions import PathJoinSubstitution, Command, LaunchConfiguration, NotSubstitution
 from launch_ros.substitutions import FindPackageShare
 from launch.actions import DeclareLaunchArgument
-from launch.conditions import IfCondition, UnlessCondition
+from launch.conditions import IfCondition
 import os
 
 def generate_launch_description():
@@ -29,8 +29,8 @@ def generate_launch_description():
     pkg_share = FindPackageShare('ros_arduino_bridge')
     
     # Launch arguments
-    arduino_port = LaunchConfiguration('arduino_port', default='/dev/serial/by-id/usb-1a86_USB_Serial-if00-port0')
-    use_ekf = LaunchConfiguration('use_ekf', default='false')
+    arduino_port = LaunchConfiguration('arduino_port')
+    use_ekf = LaunchConfiguration('use_ekf')
     
     # Robot description path
     urdf_path = PathJoinSubstitution([
@@ -82,7 +82,8 @@ def generate_launch_description():
             # TF publishing control (conditional based on use_ekf)
             # If using EKF, disable bridge TF (EKF will publish it)
             # If not using EKF, enable bridge TF
-            'publish_tf': UnlessCondition(use_ekf),
+            # NotSubstitution inverts the boolean value
+            'publish_tf': NotSubstitution(use_ekf),
         }]
     )
     
