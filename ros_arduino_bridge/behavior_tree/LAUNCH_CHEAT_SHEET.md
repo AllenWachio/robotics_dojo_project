@@ -10,11 +10,13 @@ cd ~/ros2_ws/src/ros_arduino_bridge/deployment/scripts/laptop
 ```
 
 **Wait for RViz to open** → Then **LOCALIZE ROBOT**:
+
 1. Click **"2D Pose Estimate"** in RViz toolbar
 2. Click on map where robot **actually is**
 3. Drag to set robot's **orientation**
 
 Verify:
+
 ```bash
 ros2 topic echo /amcl_pose --once
 ```
@@ -43,12 +45,12 @@ cd ~/ros2_ws/src/ros_arduino_bridge/deployment/scripts/laptop
 
 ## 🚨 Common Issues
 
-| Problem | Solution |
-|---------|----------|
-| "Nav2 not available" | Launch navigation first (Terminal 1) |
-| "No AMCL pose" | Localize robot in RViz |
-| Robot doesn't move | Test with "2D Goal Pose" in RViz first |
-| "LiDAR not found" | Check Pi: `ros2 topic echo /scan --once` |
+| Problem              | Solution                                 |
+| -------------------- | ---------------------------------------- |
+| "Nav2 not available" | Launch navigation first (Terminal 1)     |
+| "No AMCL pose"       | Localize robot in RViz                   |
+| Robot doesn't move   | Test with "2D Goal Pose" in RViz first   |
+| "LiDAR not found"    | Check Pi: `ros2 topic echo /scan --once` |
 
 ---
 

@@ -5,6 +5,7 @@
 ### Prerequisites Check ✓
 
 Before starting, verify you have:
+
 - ✅ Raspberry Pi running (Arduino bridge + LiDAR)
 - ✅ Laptop connected to same network as Pi
 - ✅ ROS2 sourced: `source ~/ros2_ws/install/setup.bash`
@@ -38,6 +39,7 @@ cd ~/ros2_ws/src/ros_arduino_bridge/deployment/scripts/laptop
 ```
 
 This launches:
+
 - SLAM Toolbox (builds/loads map)
 - AMCL Localization
 - Nav2 Navigation Stack
@@ -57,10 +59,12 @@ This is **CRITICAL** - the robot must know where it is!
 4. **Drag** to set robot's orientation (direction it's facing)
 
 You should see:
+
 - Green arrow showing robot's estimated position
 - Laser scan data aligning with map walls
 
 **Verify localization:**
+
 ```bash
 # In a new terminal
 ros2 topic echo /amcl_pose --once
@@ -81,12 +85,14 @@ cd ~/ros2_ws/src/ros_arduino_bridge/deployment/scripts/laptop
 ```
 
 This script will:
+
 1. ✅ Check all prerequisites (Nav2, AMCL, LiDAR)
 2. ✅ Show current robot position
 3. ✅ Launch the test behavior tree
 4. ✅ Execute the mission
 
 **You'll see output like:**
+
 ```
 ============================================================
   TEST: Incremental Navigation with Obstacle Avoidance
@@ -131,41 +137,41 @@ from incremental_move_behavior import IncrementalMove
 
 def create_my_mission():
     root = py_trees.composites.Sequence("MyMission", memory=True)
-    
+
     # Add your waypoints here
     move1 = IncrementalMove("GoToA", 1.0, 1.0)
     move2 = IncrementalMove("GoToB", 2.0, -1.0)
     move3 = IncrementalMove("GoHome", 0.0, 0.0)
-    
+
     root.add_children([move1, move2, move3])
     return root
 
 def main():
     rclpy.init()
     node = rclpy.create_node('my_mission_node')
-    
+
     root = create_my_mission()
-    
+
     # Setup behaviors
     for behavior in py_trees.trees.BehaviourTree(root).root.iterate():
         if hasattr(behavior, 'setup'):
             behavior.setup(node=node)
-    
+
     tree = py_trees.trees.BehaviourTree(root)
-    
+
     rate = node.create_rate(10)
     while rclpy.ok():
         rclpy.spin_once(node, timeout_sec=0.1)
         tree.tick()
-        
+
         if root.status != py_trees.common.Status.RUNNING:
             break
-        
+
         try:
             rate.sleep()
         except:
             pass
-    
+
     node.destroy_node()
     rclpy.shutdown()
 
@@ -174,6 +180,7 @@ if __name__ == '__main__':
 ```
 
 Then run:
+
 ```bash
 chmod +x my_mission.py
 python3 my_mission.py
@@ -186,12 +193,14 @@ python3 my_mission.py
 Here's what you should have running:
 
 ### **On Raspberry Pi:**
+
 ```
 Terminal 1: Arduino Bridge (./01_arduino.sh)
 Terminal 2: LiDAR        (./02_lidar.sh)
 ```
 
 ### **On Laptop:**
+
 ```
 Terminal 1: Navigation   (./03_slam.sh) + RViz
 Terminal 2: Behavior Tree (./06_incremental_test.sh)
@@ -245,6 +254,7 @@ Terminal 2: Behavior Tree (./06_incremental_test.sh)
 **Cause:** Nav2 not running or not ready
 
 **Solution:**
+
 ```bash
 # Check if navigation is running
 ros2 node list | grep controller
@@ -261,6 +271,7 @@ ros2 action list | grep navigate_to_pose
 **Cause:** AMCL not publishing or robot not localized
 
 **Solution:**
+
 ```bash
 # Check AMCL
 ros2 topic echo /amcl_pose --once
@@ -278,6 +289,7 @@ ros2 node list | grep amcl
 **Cause:** LiDAR not running on Pi
 
 **Solution:**
+
 ```bash
 # On Pi, check LiDAR
 ros2 topic list | grep scan
@@ -292,11 +304,13 @@ ros2 topic echo /scan --once
 ### **Issue: Robot doesn't move**
 
 **Possible causes:**
+
 1. Not localized properly → Re-localize in RViz
 2. Goal is unreachable → Test goal with "2D Goal Pose" in RViz first
 3. Nav2 parameters incorrect → Check controller_server status
 
 **Debug steps:**
+
 ```bash
 # Test navigation manually in RViz
 # Use "2D Goal Pose" tool to send a goal
@@ -362,16 +376,19 @@ Before running `./06_incremental_test.sh`:
 ### **`./03_slam.sh` (Navigation Stack)**
 
 Launches:
+
 1. **SLAM Toolbox** - Builds/loads map
 2. **AMCL** - Localizes robot on map
 3. **Nav2** - Navigation stack (planner + controller)
 4. **RViz** - Visualization
 
 Publishes:
+
 - `/map` - Occupancy grid
 - `/amcl_pose` - Robot position estimate
 
 Subscribes to:
+
 - `/scan` - LiDAR data
 - `/odom` - Odometry
 
@@ -385,6 +402,7 @@ Subscribes to:
 4. **Monitor** - Shows progress logs
 
 Uses:
+
 - `/amcl_pose` - For position tracking
 - `/scan` - For obstacle avoidance
 - `NavigateToPose` action - For movement
@@ -394,24 +412,31 @@ Uses:
 ## 💡 Pro Tips
 
 ### **Tip 1: Always localize first!**
+
 The most common mistake is forgetting to localize. The robot **must** know where it is on the map before navigation will work.
 
 ### **Tip 2: Test goals in RViz first**
+
 Before adding waypoints to your behavior tree, test them manually:
+
 1. Click "2D Goal Pose" in RViz
 2. Click on map where you want robot to go
 3. If robot navigates successfully → waypoint is good!
 4. If navigation fails → choose different waypoint
 
 ### **Tip 3: Watch RViz while behavior tree runs**
+
 You can see:
+
 - Current waypoint goal (green arrow)
 - Planned path (green line)
 - LiDAR scan (red dots)
 - Robot position (green/blue arrow)
 
 ### **Tip 4: Start with small movements**
+
 The test mission uses safe coordinates:
+
 - Point A: (0.5, 0.5)
 - Point B: (0.5, -0.5)
 
