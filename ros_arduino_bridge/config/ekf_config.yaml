@@ -5,9 +5,9 @@
 ekf_filter_node:
   ros__parameters:
     # Frequency at which the filter publishes (Hz)
-    # Set to 15Hz - balanced between odometry (10Hz) and sensor polling (20Hz)
-    # Lower than sensor rates to prevent "Failed to meet update rate" warnings
-    frequency: 15.0
+    # Lowered to 10Hz for Raspberry Pi - EKF takes ~0.2s per cycle
+    # This matches odometry rate and prevents blocking velocity commands
+    frequency: 10.0
 
     # The filter can operate in 2D (false) or 3D (true) mode
     # For differential drive on flat ground, 2D is appropriate
@@ -16,6 +16,9 @@ ekf_filter_node:
     # Transform publication settings
     publish_tf: true
     publish_acceleration: false
+
+    # Predict to current time to reduce latency
+    predict_to_current_time: true
 
     # Map frame name (for localization/SLAM integration)
     map_frame: map
@@ -44,7 +47,7 @@ ekf_filter_node:
         false,
         false, # x_accel, y_accel, z_accel
       ]
-    odom0_queue_size: 10
+    odom0_queue_size: 2 # Reduced from 10 to minimize processing
     odom0_differential: false # Use absolute measurements
     odom0_relative: false
 
@@ -68,16 +71,16 @@ ekf_filter_node:
         false,
         false,
         true, # roll_vel, pitch_vel, yaw_vel (USE gyro Z - corrects wheel slip!)
-        true,
-        true,
-        true, # x_accel, y_accel, z_accel (USE accelerations for dynamics)
+        false,
+        false,
+        false, # x_accel, y_accel, z_accel - DISABLED to reduce processing
       ]
-    imu0_queue_size: 10
+    imu0_queue_size: 2 # Reduced from 10 to minimize processing
     imu0_differential: false
     imu0_relative: false
 
     # Remove gravitational acceleration from IMU data
-    imu0_remove_gravitational_acceleration: true
+    imu0_remove_gravitational_acceleration: false # Disabled since we're not using accel data
 
     # IMU is more accurate for angular velocity (no slip) but can drift over time
     # Lower covariance for yaw_vel means "trust this more for rotation"
