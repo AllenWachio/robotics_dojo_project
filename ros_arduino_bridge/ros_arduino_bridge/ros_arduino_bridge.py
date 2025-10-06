@@ -71,6 +71,8 @@ class ROSArduinoBridge(Node):
         self.last_odom_update = self.get_clock().now()
         # Throttle warnings for invalid encoder data
         self._last_invalid_encoder_warn = 0.0
+        # Throttle warnings for color sensor (low values)
+        self._last_color_sensor_warn = 0.0
 
         # Servo state
         self.camera_servo_angle = 50  # Initial position from Arduino
@@ -625,8 +627,14 @@ class ROSArduinoBridge(Node):
             return "Bluish" if color_diff > 0.3 else "Light Blue"
 
     def read_color_sensor(self):
-        """Read color sensor data periodically"""
+        """Read color sensor data periodically (only when there are active subscribers)"""
         if not self.serial or not self.serial.is_open:
+            return
+        
+        # Only poll color sensor if someone is subscribed to the topics
+        # This prevents unnecessary serial traffic and warning spam
+        if (self.color_sensor_pub.get_subscription_count() == 0 and 
+            self.color_sensor_raw_pub.get_subscription_count() == 0):
             return
         
         # Send color read command (v command reads color data)
@@ -658,12 +666,15 @@ class ROSArduinoBridge(Node):
                     raw_msg.data = f"R:{values[0]} G:{values[1]} B:{values[2]}"
                     self.color_sensor_raw_pub.publish(raw_msg)
                     
-                    # Warn if values are suspiciously low
+                    # Warn if values are suspiciously low (throttled to once every 10 seconds)
                     if max(values) < 100:
-                        self.get_logger().warning(
-                            f"Color values very low: R={values[0]} G={values[1]} B={values[2]}. "
-                            "Check sensor wiring, power, or Arduino 'v' command response"
-                        )
+                        now = time.time()
+                        if now - self._last_color_sensor_warn > 10.0:
+                            self.get_logger().warning(
+                                f"Color values very low: R={values[0]} G={values[1]} B={values[2]}. "
+                                "Check sensor wiring, power, or Arduino 'v' command response"
+                            )
+                            self._last_color_sensor_warn = now
                     
                     self.get_logger().debug(f"Color RGB: {values}")
                     break
