@@ -81,8 +81,9 @@ class ROSArduinoBridge(Node):
 
         # Publishers
         self.odom_pub = self.create_publisher(Odometry, "odom", 10)
-        # IMU and ultrasonic publishers temporarily disabled (encoders-only mode)
-        # self.imu_pub = self.create_publisher(Imu, "imu/data", 10)
+        # IMU publisher (Arduino command 'z' returns yaw in degrees)
+        self.imu_pub = self.create_publisher(Imu, "imu/data", 10)
+        # Ultrasonic publishers temporarily disabled (encoders-only mode)
         # self.ultrasonic_left_pub = self.create_publisher(Range, "ultrasonic/left", 10)
         # self.ultrasonic_right_pub = self.create_publisher(Range, "ultrasonic/right", 10)
         self.robot_state_pub = self.create_publisher(Int32, "robot_state", 10)
@@ -132,6 +133,7 @@ class ROSArduinoBridge(Node):
         self.odom_timer = self.create_timer(0.1, self.update_odometry)  # 10Hz
         self.state_timer = self.create_timer(1.0, self.publish_robot_state)  # 1Hz
         self.color_timer = self.create_timer(0.2, self.read_color_sensor)  # 5Hz
+        self.imu_timer = self.create_timer(0.2, self._request_imu)  # 5Hz IMU polling
 
         self.get_logger().info("ROS Arduino Bridge node started")
 
@@ -197,6 +199,61 @@ class ROSArduinoBridge(Node):
                 self.serial.close()
                 self.serial = None
         return None
+
+    def _request_imu(self):
+        """Send the IMU request command to the Arduino ('z')."""
+        try:
+            if self.serial and self.serial.is_open:
+                self.send_command('z')
+        except Exception:
+            # Keep silent to avoid timer storms
+            pass
+
+    def _handle_imu_line(self, line: str):
+        """
+        Parse IMU line from Arduino and publish sensor_msgs/Imu.
+        Expected formats (common examples):
+          "Z:123.4"   -> degrees
+          "IMU 123.4" -> degrees
+          "123.4"     -> degrees only
+        Degrees are yaw (heading). We publish orientation quaternion computed from yaw (rad).
+        """
+        s = line.strip()
+        # Quick filter: look for 'IMU' or numeric-only line or prefix 'Z'/'z'
+        if not (re.search(r'\bIMU\b', s, re.IGNORECASE) or 
+                re.match(r'^\s*[Zz:]*\s*-?\d+(\.\d+)?\s*$', s) or 
+                re.search(r'(-?\d+(\.\d+)?)[^\d.-]*$', s)):
+            return
+
+        m = re.search(r'(-?\d+(\.\d+)?)', s)
+        if not m:
+            return
+        try:
+            deg = float(m.group(1))
+        except ValueError:
+            return
+
+        # Convert yaw degrees to radians and to quaternion (roll=0, pitch=0)
+        yaw = math.radians(deg)
+        qz = math.sin(yaw / 2.0)
+        qw = math.cos(yaw / 2.0)
+
+        imu_msg = Imu()
+        # Orientation quaternion: x,y set to 0; z,w from yaw
+        imu_msg.orientation.x = 0.0
+        imu_msg.orientation.y = 0.0
+        imu_msg.orientation.z = float(qz)
+        imu_msg.orientation.w = float(qw)
+
+        # We don't have angular_velocity or linear_accel from this simple reading.
+        # Leave those fields as zero and set header.
+        try:
+            imu_msg.header.stamp = self.get_clock().now().to_msg()
+            imu_msg.header.frame_id = 'base_link'  # adjust frame if needed
+            self.imu_pub.publish(imu_msg)
+            self.get_logger().debug(f"IMU published: yaw={deg:.2f}° (qz={qz:.4f}, qw={qw:.4f})")
+        except Exception as e:
+            self.get_logger().warning(f"Failed to publish IMU: {e}")
 
     def cmd_vel_callback(self, msg):
         """Convert Twist message to motor speeds for 4WD"""
@@ -450,20 +507,22 @@ class ROSArduinoBridge(Node):
             f"diff={color_diff:.2f} total={total}"
         )
         
-        # Very low total with low difference = Black/Dark Gray
-        if total < 20 and color_diff < 0.3:
+        # Very low total with low difference = Black
+        if total < 15 and color_diff < 0.3:
             return "Black"
         
         # Low color difference = grayscale (all channels similar)
-        if color_diff < 0.15:
-            if total < 15:
+        if color_diff < 0.20:  # Increased from 0.15 to catch more balanced colors
+            if total < 20:
                 return "Black"
-            elif total < 30:
+            elif total < 40:
                 return "Dark Gray"
-            elif total < 50:
+            elif total < 70:
                 return "Gray"
+            elif total < 100:
+                return "Light Gray"
             else:
-                return "Light Gray" if total < 80 else "White"
+                return "White"
         
         # Identify dominant color based on which channel is highest
         dominant_threshold = 0.85  # Channel needs to be 85% or higher to be "dominant"
@@ -578,6 +637,15 @@ class ROSArduinoBridge(Node):
                 line = self.read_serial_line()
                 if not line:
                     continue
+                
+                # Check if this line is IMU data and handle it
+                if re.search(r'\bIMU\b', line, re.IGNORECASE) or re.match(r'^\s*[Zz:]*\s*-?\d+(\.\d+)?\s*$', line):
+                    try:
+                        self._handle_imu_line(line)
+                    except Exception:
+                        pass
+                    continue  # Keep looking for encoder data
+                
                 try:
                     counts = list(map(int, line.split()))
                     if len(counts) == 4:
