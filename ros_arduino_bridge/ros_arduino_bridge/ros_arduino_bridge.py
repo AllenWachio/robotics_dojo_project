@@ -473,7 +473,7 @@ class ROSArduinoBridge(Node):
             return
 
         # Define a threshold for the minimum change in encoder counts
-        encoder_threshold = 3  # Start with a threshold of 2 ticks
+        encoder_threshold = 1  # Start with a threshold of 2 ticks
 
         # Calculate wheel displacements in meters
         ticks_to_meters = (2 * math.pi * self.wheel_radius) / self.encoder_ticks_per_rev

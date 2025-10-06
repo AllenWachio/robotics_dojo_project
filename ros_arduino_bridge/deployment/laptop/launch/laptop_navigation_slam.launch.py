@@ -209,6 +209,7 @@ def generate_launch_description():
                              description='Run SLAM Toolbox localization (set false if already running)'),
         
         # Localization (replaces AMCL)
+
         slam_localization_node,
         
         # Core navigation nodes
