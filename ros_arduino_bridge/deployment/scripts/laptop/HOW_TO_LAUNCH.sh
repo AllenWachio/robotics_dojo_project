@@ -1,0 +1,120 @@
+#!/bin/bash
+################################################################################
+# QUICK START: Launch Incremental Navigation
+# 
+# Run this after Arduino and LiDAR are running on Raspberry Pi
+################################################################################
+
+# Colors
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+RED='\033[0;31m'
+NC='\033[0m'
+
+echo -e "${BLUE}╔══════════════════════════════════════════════════════════╗${NC}"
+echo -e "${BLUE}║     INCREMENTAL NAVIGATION - LAUNCH SEQUENCE            ║${NC}"
+echo -e "${BLUE}╔══════════════════════════════════════════════════════════╗${NC}"
+echo ""
+
+echo -e "${YELLOW}📋 PREREQUISITES CHECK${NC}"
+echo "--------------------------------------------------------------"
+echo ""
+echo -e "${GREEN}✓ ON RASPBERRY PI (already done):${NC}"
+echo "    Terminal 1: ./01_arduino.sh    (Arduino bridge)"
+echo "    Terminal 2: ./02_lidar.sh      (LiDAR scan)"
+echo ""
+
+echo -e "${YELLOW}📝 WHAT YOU NEED TO DO NOW:${NC}"
+echo "--------------------------------------------------------------"
+echo ""
+
+echo -e "${BLUE}STEP 1: Launch Navigation Stack${NC}"
+echo ""
+echo "Choose ONE of these options:"
+echo ""
+echo -e "${GREEN}Option A: SLAM + Navigation (if building/updating map)${NC}"
+echo "  cd ~/ros2_ws/src/ros_arduino_bridge/deployment/scripts/laptop"
+echo "  ./02c_slam_navigation_mode.sh"
+echo ""
+echo -e "${GREEN}Option B: Navigation Only (if map already saved)${NC}"
+echo "  cd ~/ros2_ws/src/ros_arduino_bridge/deployment/scripts/laptop"
+echo "  ./02_navigation_mode.sh"
+echo ""
+echo "This will:"
+echo "  • Launch SLAM Toolbox (Option A) or load saved map (Option B)"
+echo "  • Start AMCL localization"
+echo "  • Start Nav2 navigation stack"
+echo "  • Open RViz visualization"
+echo ""
+
+echo -e "${BLUE}STEP 2: Localize Robot in RViz${NC}"
+echo ""
+echo "Once RViz opens:"
+echo "  1. Find '2D Pose Estimate' button in toolbar"
+echo "  2. Click on map where robot is currently located"
+echo "  3. Drag to set robot's orientation (direction facing)"
+echo ""
+echo "You should see:"
+echo "  • Green arrow showing robot position"
+echo "  • Red dots (LiDAR) aligning with map walls"
+echo ""
+echo "Verify localization:"
+echo "  ros2 topic echo /amcl_pose --once"
+echo ""
+
+echo -e "${BLUE}STEP 3: Launch Incremental Navigation Test${NC}"
+echo ""
+echo "In a NEW terminal:"
+echo "  cd ~/ros2_ws/src/ros_arduino_bridge/deployment/scripts/laptop"
+echo "  ./06_incremental_test.sh"
+echo ""
+echo "This will:"
+echo "  • Check all prerequisites"
+echo "  • Show current robot position"
+echo "  • Launch behavior tree"
+echo "  • Start incremental navigation mission"
+echo ""
+
+echo -e "${YELLOW}🎯 TERMINAL LAYOUT:${NC}"
+echo "--------------------------------------------------------------"
+echo ""
+echo "Raspberry Pi:"
+echo "  Terminal 1: Arduino Bridge (already running)"
+echo "  Terminal 2: LiDAR         (already running)"
+echo ""
+echo "Laptop:"
+echo "  Terminal 1: Navigation Stack (./02c_slam_navigation_mode.sh)"
+echo "  Terminal 2: Behavior Tree    (./06_incremental_test.sh)"
+echo ""
+
+echo -e "${YELLOW}⚠️  IMPORTANT REMINDERS:${NC}"
+echo "--------------------------------------------------------------"
+echo ""
+echo "1. ALWAYS localize robot in RViz before running behavior tree!"
+echo "2. Test waypoints with '2D Goal Pose' in RViz first"
+echo "3. Watch RViz while mission runs to see robot's path"
+echo "4. Check logs if something doesn't work - they're detailed!"
+echo ""
+
+echo -e "${GREEN}🚀 READY TO LAUNCH?${NC}"
+echo "--------------------------------------------------------------"
+echo ""
+echo "Copy and run these commands:"
+echo ""
+echo -e "${BLUE}# Terminal 1 (Laptop) - Launch Navigation${NC}"
+echo "cd ~/ros2_ws/src/ros_arduino_bridge/deployment/scripts/laptop"
+echo "./02c_slam_navigation_mode.sh"
+echo ""
+echo -e "${YELLOW}# (Wait for RViz, then localize with '2D Pose Estimate')${NC}"
+echo ""
+echo -e "${BLUE}# Terminal 2 (Laptop) - Launch Behavior Tree${NC}"
+echo "cd ~/ros2_ws/src/ros_arduino_bridge/deployment/scripts/laptop"
+echo "./06_incremental_test.sh"
+echo ""
+
+echo -e "${BLUE}╚══════════════════════════════════════════════════════════╝${NC}"
+echo ""
+echo -e "${GREEN}For detailed guide, see:${NC}"
+echo "  ~/ros2_ws/src/ros_arduino_bridge/behavior_tree/LAUNCH_GUIDE.md"
+echo ""

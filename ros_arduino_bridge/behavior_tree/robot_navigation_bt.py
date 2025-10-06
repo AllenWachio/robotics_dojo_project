@@ -254,10 +254,14 @@ def create_root():
     root = py_trees.composites.Sequence("RootSequence", memory=True)
 
     # Move to specific coordinates
-    #move1 = MoveToPosition("MoveToPoint1", 1.0, 1.0, tolerance=0.2)  # Move to (1.0, 1.0). Tolerance is not used anymore so ignore it. 
-    move1 = MoveToPosition("MoveToPoint1", 2.1, 0.0, tolerance=0.2)  # Move to (1.0, 1.0). Tolerance is not used anymore so ignore it. 
+    # ⚠️ IMPORTANT: Change these coordinates to match YOUR map!
+    # Use RViz "2D Goal Pose" to find valid coordinates on your gamefield map
+    # Current coordinates are EXAMPLES - they may not work on your map!
+    
+    # Example: Small test mission - adjust to match your map
+    move1 = MoveToPosition("MoveToPoint1", 0.5, 0.5, tolerance=0.2)  # Short distance for testing
     task1 = PrintHello("Task1")
-    move2 = MoveToPosition("MoveToPoint2", 0, -1.2, tolerance=0.2)  # Move to (-1.0, -1.0). Tolerance is not used anymore so ignore it. 
+    move2 = MoveToPosition("MoveToPoint2", 0.5, -0.5, tolerance=0.2)  # Return close to start
     task2 = PrintHi("Task2")
 
     # Add to sequence
