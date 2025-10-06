@@ -5,101 +5,544 @@
 ekf_filter_node:
   ros__parameters:
     # Frequency at which the filter publishes (Hz)
-    frequency: 30.0
-    
+    # Set to 15Hz - balanced between odometry (10Hz) and sensor polling (20Hz)
+    # Lower than sensor rates to prevent "Failed to meet update rate" warnings
+    frequency: 15.0
+
     # The filter can operate in 2D (false) or 3D (true) mode
     # For differential drive on flat ground, 2D is appropriate
     two_d_mode: true
-    
+
     # Transform publication settings
     publish_tf: true
     publish_acceleration: false
-    
+
     # Map frame name (for localization/SLAM integration)
     map_frame: map
     odom_frame: odom
     base_link_frame: base_link
-    world_frame: odom  # For odometry-only fusion (not SLAM localization)
-    
+    world_frame: odom # For odometry-only fusion (not SLAM localization)
+
     # ---------------------------------------------
     # Input Source 1: Wheel Odometry (/odom)
     # ---------------------------------------------
     odom0: /odom
     odom0_config: [
-      false, false, false,  # x, y, z position (don't fuse position from wheels - drift accumulates)
-      false, false, false,  # roll, pitch, yaw orientation (don't fuse yaw from wheels - slips during turns)
-      true,  true,  false,  # x_vel, y_vel, z_vel (USE wheel velocities - accurate for straight motion)
-      false, false, true,   # roll_vel, pitch_vel, yaw_vel (USE yaw velocity from wheels as baseline)
-      false, false, false   # x_accel, y_accel, z_accel
-    ]
+        false,
+        false,
+        false, # x, y, z position (don't fuse position from wheels - drift accumulates)
+        false,
+        false,
+        false, # roll, pitch, yaw orientation (don't fuse yaw from wheels - slips during turns)
+        true,
+        true,
+        false, # x_vel, y_vel, z_vel (USE wheel velocities - accurate for straight motion)
+        false,
+        false,
+        true, # roll_vel, pitch_vel, yaw_vel (USE yaw velocity from wheels as baseline)
+        false,
+        false,
+        false, # x_accel, y_accel, z_accel
+      ]
     odom0_queue_size: 10
-    odom0_differential: false  # Use absolute measurements
+    odom0_differential: false # Use absolute measurements
     odom0_relative: false
-    
+
     # Wheel odometry is accurate for linear velocity but slips during rotation
     # Higher covariance for yaw velocity means "trust this less during turns"
-    
+
     # ---------------------------------------------
     # Input Source 2: IMU (/imu/data)
     # ---------------------------------------------
     imu0: /imu/data
     imu0_config: [
-      false, false, false,  # x, y, z position (IMU doesn't provide position)
-      false, false, true,   # roll, pitch, yaw orientation (USE yaw from IMU - accurate heading)
-      false, false, false,  # x_vel, y_vel, z_vel
-      false, false, true,   # roll_vel, pitch_vel, yaw_vel (USE gyro Z - corrects wheel slip!)
-      true,  true,  true    # x_accel, y_accel, z_accel (USE accelerations for dynamics)
-    ]
+        false,
+        false,
+        false, # x, y, z position (IMU doesn't provide position)
+        false,
+        false,
+        true, # roll, pitch, yaw orientation (USE yaw from IMU - accurate heading)
+        false,
+        false,
+        false, # x_vel, y_vel, z_vel
+        false,
+        false,
+        true, # roll_vel, pitch_vel, yaw_vel (USE gyro Z - corrects wheel slip!)
+        true,
+        true,
+        true, # x_accel, y_accel, z_accel (USE accelerations for dynamics)
+      ]
     imu0_queue_size: 10
     imu0_differential: false
     imu0_relative: false
-    
+
     # Remove gravitational acceleration from IMU data
     imu0_remove_gravitational_acceleration: true
-    
+
     # IMU is more accurate for angular velocity (no slip) but can drift over time
     # Lower covariance for yaw_vel means "trust this more for rotation"
-    
+
     # ---------------------------------------------
     # Process Noise Covariance
     # ---------------------------------------------
     # How much we expect the state to change between measurements
     # Tune these if the filter is too "jumpy" (decrease) or too "sluggish" (increase)
     process_noise_covariance: [
-      0.05,  0.0,   0.0,   0.0,   0.0,   0.0,   0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,  # x
-      0.0,   0.05,  0.0,   0.0,   0.0,   0.0,   0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,  # y
-      0.0,   0.0,   0.06,  0.0,   0.0,   0.0,   0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,  # z
-      0.0,   0.0,   0.0,   0.03,  0.0,   0.0,   0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,  # roll
-      0.0,   0.0,   0.0,   0.0,   0.03,  0.0,   0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,  # pitch
-      0.0,   0.0,   0.0,   0.0,   0.0,   0.06,  0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,  # yaw
-      0.0,   0.0,   0.0,   0.0,   0.0,   0.0,   0.025,  0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,  # x_vel
-      0.0,   0.0,   0.0,   0.0,   0.0,   0.0,   0.0,    0.025,  0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,  # y_vel
-      0.0,   0.0,   0.0,   0.0,   0.0,   0.0,   0.0,    0.0,    0.04,   0.0,    0.0,    0.0,    0.0,    0.0,    0.0,  # z_vel
-      0.0,   0.0,   0.0,   0.0,   0.0,   0.0,   0.0,    0.0,    0.0,    0.01,   0.0,    0.0,    0.0,    0.0,    0.0,  # roll_vel
-      0.0,   0.0,   0.0,   0.0,   0.0,   0.0,   0.0,    0.0,    0.0,    0.0,    0.01,   0.0,    0.0,    0.0,    0.0,  # pitch_vel
-      0.0,   0.0,   0.0,   0.0,   0.0,   0.0,   0.0,    0.0,    0.0,    0.0,    0.0,    0.02,   0.0,    0.0,    0.0,  # yaw_vel
-      0.0,   0.0,   0.0,   0.0,   0.0,   0.0,   0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.01,   0.0,    0.0,  # x_accel
-      0.0,   0.0,   0.0,   0.0,   0.0,   0.0,   0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.01,   0.0,  # y_accel
-      0.0,   0.0,   0.0,   0.0,   0.0,   0.0,   0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.015 # z_accel
-    ]
-    
+        0.05,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0, # x
+        0.0,
+        0.05,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0, # y
+        0.0,
+        0.0,
+        0.06,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0, # z
+        0.0,
+        0.0,
+        0.0,
+        0.03,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0, # roll
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.03,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0, # pitch
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.06,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0, # yaw
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.025,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0, # x_vel
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.025,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0, # y_vel
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.04,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0, # z_vel
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.01,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0, # roll_vel
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.01,
+        0.0,
+        0.0,
+        0.0,
+        0.0, # pitch_vel
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.02,
+        0.0,
+        0.0,
+        0.0, # yaw_vel
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.01,
+        0.0,
+        0.0, # x_accel
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.01,
+        0.0, # y_accel
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.015, # z_accel
+      ]
+
     # ---------------------------------------------
     # Initial State Covariance
     # ---------------------------------------------
-    initial_estimate_covariance: [
-      1e-9, 0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,
-      0.0,  1e-9, 0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,
-      0.0,  0.0,  1e-9, 0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,
-      0.0,  0.0,  0.0,  1e-9, 0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,
-      0.0,  0.0,  0.0,  0.0,  1e-9, 0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,
-      0.0,  0.0,  0.0,  0.0,  0.0,  1e-9, 0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,
-      0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  1e-9, 0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,
-      0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  1e-9, 0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,
-      0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  1e-9, 0.0,  0.0,  0.0,  0.0,  0.0,  0.0,
-      0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  1e-9, 0.0,  0.0,  0.0,  0.0,  0.0,
-      0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  1e-9, 0.0,  0.0,  0.0,  0.0,
-      0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  1e-9, 0.0,  0.0,  0.0,
-      0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  1e-9, 0.0,  0.0,
-      0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  1e-9, 0.0,
-      0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  1e-9
-    ]
+    initial_estimate_covariance:
+      [
+        1e-9,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1e-9,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1e-9,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1e-9,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1e-9,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1e-9,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1e-9,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1e-9,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1e-9,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1e-9,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1e-9,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1e-9,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1e-9,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1e-9,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1e-9,
+      ]
