@@ -8,6 +8,7 @@ Added support for:
 2. **Camera Servo** - Pan/tilt camera positioning
 3. **Tipper Servo** - Tipping mechanism control
 4. **Stepper Motor** - Conveyor belt for offloading objects
+5. **IMU (MPU6050/MPU9250) with Full 9-DOF Data** - Orientation, gyroscope, accelerometer ⭐ **NEW!**
 
 ## Changes Made to `ros_arduino_bridge.py`
 
@@ -66,14 +67,26 @@ self.color_timer = self.create_timer(0.2, self.read_color_sensor)  # 5Hz color r
 | `s`     | `s <index> <angle>`     | `s 0 90`      | Set servo angle (0=camera, 1=tipper)      |
 | `q`     | `q <rpm>:<dist>:<flag>` | `q -25:400:0` | Stepper command                           |
 | `v`     | `v` or `v 0` or `v 1`   | `v 1`         | Read color sensor / control LED           |
+| `i`     | `i`                     | `i`           | Read full IMU data (9 values) ⭐ **NEW!** |
 | `y`     | `y`                     | `y`           | Get robot state (includes stepper status) |
 
 ### Expected Responses from Arduino
 
-| Command    | Response Format           | Example                                          |
-| ---------- | ------------------------- | ------------------------------------------------ |
-| Color read | `R G B` (space-separated) | `45231 12456 8932`                               |
-| State      | Single integer            | `0` (OFFLOADING), `1` (MOVING), `2` (STATIONARY) |
+| Command    | Response Format                   | Example                                          |
+| ---------- | --------------------------------- | ------------------------------------------------ |
+| Color read | `R G B` (space-separated)         | `45231 12456 8932`                               |
+| IMU read   | 9 floats (space-separated)        | `45.30 2.10 -1.50 0.05 -0.02 12.34 0.12 -0.05 9.78` ⭐ **NEW!** |
+| State      | Single integer                    | `0` (OFFLOADING), `1` (MOVING), `2` (STATIONARY) |
+
+**IMU Response Format Details:**
+```
+yaw pitch roll gyro_x gyro_y gyro_z accel_x accel_y accel_z
+```
+- Angles: degrees
+- Gyro: degrees/second  
+- Accel: m/s²
+
+See `IMU_IMPLEMENTATION.md` for complete details.
 
 ## Testing When Running `./01_arduino_only.sh`
 

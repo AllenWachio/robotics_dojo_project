@@ -201,10 +201,10 @@ class ROSArduinoBridge(Node):
         return None
 
     def _request_imu(self):
-        """Send the IMU request command to the Arduino ('z')."""
+        """Send the IMU request command to the Arduino ('i')."""
         try:
             if self.serial and self.serial.is_open:
-                self.send_command('z')
+                self.send_command('i')
         except Exception:
             # Keep silent to avoid timer storms
             pass
@@ -212,46 +212,90 @@ class ROSArduinoBridge(Node):
     def _handle_imu_line(self, line: str):
         """
         Parse IMU line from Arduino and publish sensor_msgs/Imu.
-        Expected formats (common examples):
-          "Z:123.4"   -> degrees
-          "IMU 123.4" -> degrees
-          "123.4"     -> degrees only
-        Degrees are yaw (heading). We publish orientation quaternion computed from yaw (rad).
+        Expected format (9 space-separated values):
+          "yaw pitch roll gyro_x gyro_y gyro_z accel_x accel_y accel_z"
+        Example: "45.30 2.10 -1.50 0.05 -0.02 12.34 0.12 -0.05 9.78"
+        
+        yaw, pitch, roll: degrees
+        gyro_x, gyro_y, gyro_z: degrees/s
+        accel_x, accel_y, accel_z: m/s²
         """
         s = line.strip()
-        # Quick filter: look for 'IMU' or numeric-only line or prefix 'Z'/'z'
-        if not (re.search(r'\bIMU\b', s, re.IGNORECASE) or 
-                re.match(r'^\s*[Zz:]*\s*-?\d+(\.\d+)?\s*$', s) or 
-                re.search(r'(-?\d+(\.\d+)?)[^\d.-]*$', s)):
-            return
-
-        m = re.search(r'(-?\d+(\.\d+)?)', s)
-        if not m:
-            return
+        
+        # Try to parse 9 space-separated float values
         try:
-            deg = float(m.group(1))
-        except ValueError:
-            return
-
-        # Convert yaw degrees to radians and to quaternion (roll=0, pitch=0)
-        yaw = math.radians(deg)
-        qz = math.sin(yaw / 2.0)
-        qw = math.cos(yaw / 2.0)
-
+            values = list(map(float, s.split()))
+            if len(values) != 9:
+                return  # Not the expected IMU format
+        except (ValueError, AttributeError):
+            return  # Can't parse as floats
+        
+        # Extract values
+        yaw_deg, pitch_deg, roll_deg = values[0], values[1], values[2]
+        gyro_x_deg, gyro_y_deg, gyro_z_deg = values[3], values[4], values[5]
+        accel_x, accel_y, accel_z = values[6], values[7], values[8]
+        
+        # Convert angles to radians
+        yaw = math.radians(yaw_deg)
+        pitch = math.radians(pitch_deg)
+        roll = math.radians(roll_deg)
+        
+        # Convert gyro to rad/s
+        gyro_x = math.radians(gyro_x_deg)
+        gyro_y = math.radians(gyro_y_deg)
+        gyro_z = math.radians(gyro_z_deg)
+        
+        # Compute quaternion from roll, pitch, yaw (ZYX convention)
+        cy = math.cos(yaw * 0.5)
+        sy = math.sin(yaw * 0.5)
+        cp = math.cos(pitch * 0.5)
+        sp = math.sin(pitch * 0.5)
+        cr = math.cos(roll * 0.5)
+        sr = math.sin(roll * 0.5)
+        
+        qw = cr * cp * cy + sr * sp * sy
+        qx = sr * cp * cy - cr * sp * sy
+        qy = cr * sp * cy + sr * cp * sy
+        qz = cr * cp * sy - sr * sp * cy
+        
         imu_msg = Imu()
-        # Orientation quaternion: x,y set to 0; z,w from yaw
-        imu_msg.orientation.x = 0.0
-        imu_msg.orientation.y = 0.0
+        
+        # Orientation quaternion from roll, pitch, yaw
+        imu_msg.orientation.x = float(qx)
+        imu_msg.orientation.y = float(qy)
         imu_msg.orientation.z = float(qz)
         imu_msg.orientation.w = float(qw)
-
-        # We don't have angular_velocity or linear_accel from this simple reading.
-        # Leave those fields as zero and set header.
+        
+        # Angular velocity (rad/s)
+        imu_msg.angular_velocity.x = float(gyro_x)
+        imu_msg.angular_velocity.y = float(gyro_y)
+        imu_msg.angular_velocity.z = float(gyro_z)
+        
+        # Linear acceleration (m/s²)
+        imu_msg.linear_acceleration.x = float(accel_x)
+        imu_msg.linear_acceleration.y = float(accel_y)
+        imu_msg.linear_acceleration.z = float(accel_z)
+        
+        # Set covariance matrices (adjust based on your IMU specs)
+        # -1 means unknown, or set actual covariance values
+        imu_msg.orientation_covariance = [0.01, 0.0, 0.0,
+                                           0.0, 0.01, 0.0,
+                                           0.0, 0.0, 0.01]
+        imu_msg.angular_velocity_covariance = [0.001, 0.0, 0.0,
+                                                0.0, 0.001, 0.0,
+                                                0.0, 0.0, 0.001]
+        imu_msg.linear_acceleration_covariance = [0.01, 0.0, 0.0,
+                                                   0.0, 0.01, 0.0,
+                                                   0.0, 0.0, 0.01]
+        
         try:
             imu_msg.header.stamp = self.get_clock().now().to_msg()
-            imu_msg.header.frame_id = 'base_link'  # adjust frame if needed
+            imu_msg.header.frame_id = 'imu_link'  # Use imu_link frame
             self.imu_pub.publish(imu_msg)
-            self.get_logger().debug(f"IMU published: yaw={deg:.2f}° (qz={qz:.4f}, qw={qw:.4f})")
+            self.get_logger().debug(
+                f"IMU: yaw={yaw_deg:.2f}° pitch={pitch_deg:.2f}° roll={roll_deg:.2f}° | "
+                f"gyro_z={gyro_z_deg:.2f}°/s | accel_z={accel_z:.2f}m/s²"
+            )
         except Exception as e:
             self.get_logger().warning(f"Failed to publish IMU: {e}")
 
@@ -638,13 +682,15 @@ class ROSArduinoBridge(Node):
                 if not line:
                     continue
                 
-                # Check if this line is IMU data and handle it
-                if re.search(r'\bIMU\b', line, re.IGNORECASE) or re.match(r'^\s*[Zz:]*\s*-?\d+(\.\d+)?\s*$', line):
+                # Check if this line is IMU data (9 space-separated floats) and handle it
+                if len(line.split()) == 9:
                     try:
+                        # Quick test: can we parse as 9 floats?
+                        test_vals = list(map(float, line.split()))
                         self._handle_imu_line(line)
-                    except Exception:
-                        pass
-                    continue  # Keep looking for encoder data
+                        continue  # Keep looking for encoder data
+                    except (ValueError, AttributeError):
+                        pass  # Not IMU data, continue processing
                 
                 try:
                     counts = list(map(int, line.split()))
