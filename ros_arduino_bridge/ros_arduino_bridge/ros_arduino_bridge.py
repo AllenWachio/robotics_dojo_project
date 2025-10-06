@@ -138,12 +138,24 @@ class ROSArduinoBridge(Node):
                 write_timeout=1.0,
             )
             time.sleep(2)  # Wait for Arduino to reset
+            
             # Clear any startup messages from the Arduino (e.g., IMU or debug prints)
+            # Read and discard corrupted startup data
             try:
                 self.serial.reset_input_buffer()
-            except Exception:
-                # Older pyserial versions may not have reset_input_buffer
-                pass
+                # Give Arduino extra time to initialize and flush any startup messages
+                time.sleep(0.5)
+                # Try to read and discard any remaining startup garbage
+                for _ in range(5):
+                    if self.serial.in_waiting > 0:
+                        try:
+                            self.serial.readline()  # Discard
+                        except Exception:
+                            pass
+                self.serial.reset_input_buffer()  # Final clear
+            except Exception as e:
+                self.get_logger().warn(f"Could not clear serial buffer: {e}")
+                
             self.get_logger().info(f"Connected to Arduino on {self.serial_port}")
 
             # Reset encoders on startup
@@ -182,9 +194,19 @@ class ROSArduinoBridge(Node):
                 # Use select to check if data is available (non-blocking)
                 ready, _, _ = select.select([self.serial], [], [], 0.1)
                 if ready:
-                    line = self.serial.readline().decode("utf-8").strip()
+                    # Use 'ignore' to skip invalid UTF-8 bytes instead of crashing
+                    line = self.serial.readline().decode("utf-8", errors='ignore').strip()
                     if line:
                         return line
+            except UnicodeDecodeError as e:
+                # Log but don't crash on decode errors
+                self.get_logger().warn(f"Invalid UTF-8 data received from Arduino: {e}")
+                # Clear the input buffer to recover
+                try:
+                    self.serial.reset_input_buffer()
+                except Exception:
+                    pass
+                return None
             except Exception as e:
                 self.get_logger().error(f"Error reading serial: {e}")
                 self.serial.close()
