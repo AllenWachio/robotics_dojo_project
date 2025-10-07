@@ -1,13 +1,13 @@
 ### EKF Configuration for Sensor Fusion
 ### Fuses wheel odometry (/odom) with IMU data (/imu/data) to correct for wheel slippage
 ### Outputs fused odometry on /odometry/filtered
+### UPDATED: Uses full 9-DOF IMU with proper unit conversion (rad/s, m/s²)
 
 ekf_filter_node:
   ros__parameters:
     # Frequency at which the filter publishes (Hz)
-    # Lowered to 10Hz for Raspberry Pi - EKF takes ~0.2s per cycle
-    # This matches odometry rate and prevents blocking velocity commands
-    frequency: 10.0
+    # Set to 20Hz for responsive updates while not overloading Pi
+    frequency: 20.0
 
     # The filter can operate in 2D (false) or 3D (true) mode
     # For differential drive on flat ground, 2D is appropriate
@@ -31,18 +31,18 @@ ekf_filter_node:
     # ---------------------------------------------
     odom0: /odom
     odom0_config: [
-        false,
-        false,
-        false, # x, y, z position (don't fuse position from wheels - drift accumulates)
-        false,
-        false,
-        false, # roll, pitch, yaw orientation (don't fuse yaw from wheels - slips during turns)
         true,
         true,
-        false, # x_vel, y_vel, z_vel (USE wheel velocities - accurate for straight motion)
+        false, # x, y, z position (USE as position reference - prevents unbounded drift)
         false,
         false,
-        true, # roll_vel, pitch_vel, yaw_vel (USE yaw velocity from wheels as baseline)
+        false, # roll, pitch, yaw orientation (DON'T use encoder yaw - slips during turns)
+        true,
+        true,
+        false, # x_vel, y_vel, z_vel (USE wheel velocities - accurate for motion)
+        false,
+        false,
+        false, # roll_vel, pitch_vel, yaw_vel (DISABLED - let IMU handle rotation)
         false,
         false,
         false, # x_accel, y_accel, z_accel
@@ -51,39 +51,50 @@ ekf_filter_node:
     odom0_differential: false # Use absolute measurements
     odom0_relative: false
 
-    # Wheel odometry is accurate for linear velocity but slips during rotation
-    # Higher covariance for yaw velocity means "trust this less during turns"
-
     # ---------------------------------------------
-    # Input Source 2: IMU (/imu/data)
+    # Input Source 2: IMU (/imu/data) - Full 9-DOF
     # ---------------------------------------------
     imu0: /imu/data
+    # Enable full IMU: orientation (roll/pitch/yaw), angular_velocity (gyro), linear_acceleration
     imu0_config: [
         false,
         false,
         false, # x, y, z position (IMU doesn't provide position)
+        true,
+        true,
+        true, # roll, pitch, yaw orientation (USE full DMP orientation for stable heading)
         false,
         false,
-        true, # roll, pitch, yaw orientation (USE yaw from IMU - accurate heading)
-        false,
-        false,
-        false, # x_vel, y_vel, z_vel
-        false,
-        false,
-        true, # roll_vel, pitch_vel, yaw_vel (USE gyro Z - corrects wheel slip!)
-        false,
-        false,
-        false, # x_accel, y_accel, z_accel - DISABLED to reduce processing
+        false, # x_vel, y_vel, z_vel (not provided by IMU)
+        true,
+        true,
+        true, # roll_vel, pitch_vel, yaw_vel (USE gyro XYZ - now properly scaled to rad/s)
+        true,
+        true,
+        true, # x_accel, y_accel, z_accel (USE accelerometer - now properly scaled to m/s²)
       ]
-    imu0_queue_size: 2 # Reduced from 10 to minimize processing
+    imu0_queue_size: 5 # Slightly larger to smooth bursts
     imu0_differential: false
     imu0_relative: false
 
-    # Remove gravitational acceleration from IMU data
-    imu0_remove_gravitational_acceleration: false # Disabled since we're not using accel data
+    # Remove gravitational acceleration from IMU linear accel before fusion
+    # This helps isolate actual robot motion from gravity
+    imu0_remove_gravitational_acceleration: true
 
-    # IMU is more accurate for angular velocity (no slip) but can drift over time
-    # Lower covariance for yaw_vel means "trust this more for rotation"
+    # Measurement covariances - tune these to balance trust between sensors
+    # INCREASED from defaults because MPU6050 has significant noise
+    # If map still drifts, INCREASE these values further
+    imu0_orientation_covariance: [0.1, 0.0, 0.0,
+                                   0.0, 0.1, 0.0,
+                                   0.0, 0.0, 0.05]  # Trust yaw (Z) more than roll/pitch
+    
+    imu0_angular_velocity_covariance: [0.02, 0.0, 0.0,
+                                        0.0, 0.02, 0.0,
+                                        0.0, 0.0, 0.02]  # Gyro is reasonably accurate
+    
+    imu0_linear_acceleration_covariance: [0.5, 0.0, 0.0,
+                                           0.0, 0.5, 0.0,
+                                           0.0, 0.0, 0.5]  # Accel is noisy - high covariance
 
     # ---------------------------------------------
     # Process Noise Covariance

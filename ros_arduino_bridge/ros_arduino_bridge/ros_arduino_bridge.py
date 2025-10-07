@@ -221,11 +221,12 @@ class ROSArduinoBridge(Node):
         Parse IMU line from Arduino and publish sensor_msgs/Imu.
         Expected format (9 space-separated values):
           "yaw pitch roll gyro_x gyro_y gyro_z accel_x accel_y accel_z"
-        Example: "45.30 2.10 -1.50 0.05 -0.02 12.34 0.12 -0.05 9.78"
+        Example: "45.30 2.10 -1.50 23.0 -4.1 1.2 512.0 514.2 490.1"
         
-        yaw, pitch, roll: degrees
-        gyro_x, gyro_y, gyro_z: degrees/s
-        accel_x, accel_y, accel_z: m/s²
+        Arduino sends:
+        - yaw, pitch, roll: degrees (from DMP)
+        - gyro_x/y/z: RAW register values (need conversion to rad/s)
+        - accel_x/y/z: RAW register values (need conversion to m/s²)
         """
         s = line.strip()
         
@@ -239,18 +240,33 @@ class ROSArduinoBridge(Node):
         
         # Extract values
         yaw_deg, pitch_deg, roll_deg = values[0], values[1], values[2]
-        gyro_x_deg, gyro_y_deg, gyro_z_deg = values[3], values[4], values[5]
-        accel_x, accel_y, accel_z = values[6], values[7], values[8]
+        gyro_x_raw, gyro_y_raw, gyro_z_raw = values[3], values[4], values[5]
+        accel_x_raw, accel_y_raw, accel_z_raw = values[6], values[7], values[8]
         
         # Convert angles to radians
         yaw = math.radians(yaw_deg)
         pitch = math.radians(pitch_deg)
         roll = math.radians(roll_deg)
         
-        # Convert gyro to rad/s
-        gyro_x = math.radians(gyro_x_deg)
-        gyro_y = math.radians(gyro_y_deg)
-        gyro_z = math.radians(gyro_z_deg)
+        # Convert RAW gyro to rad/s
+        # MPU6050 with FS_SEL=0 (±250°/s): raw / 131.0 = deg/s
+        # Then convert deg/s to rad/s
+        gyro_scale = 131.0  # LSB/(deg/s) for ±250°/s range
+        gyro_x_deg_s = gyro_x_raw / gyro_scale
+        gyro_y_deg_s = gyro_y_raw / gyro_scale
+        gyro_z_deg_s = gyro_z_raw / gyro_scale
+        gyro_x = math.radians(gyro_x_deg_s)
+        gyro_y = math.radians(gyro_y_deg_s)
+        gyro_z = math.radians(gyro_z_deg_s)
+        
+        # Convert RAW accel to m/s²
+        # MPU6050 with AFS_SEL=0 (±2g): raw / 16384.0 = g
+        # Then convert g to m/s²
+        accel_scale = 16384.0  # LSB/g for ±2g range
+        g_to_ms2 = 9.80665  # Standard gravity
+        accel_x = (accel_x_raw / accel_scale) * g_to_ms2
+        accel_y = (accel_y_raw / accel_scale) * g_to_ms2
+        accel_z = (accel_z_raw / accel_scale) * g_to_ms2
         
         # Compute quaternion from roll, pitch, yaw (ZYX convention)
         cy = math.cos(yaw * 0.5)
@@ -301,7 +317,7 @@ class ROSArduinoBridge(Node):
             self.imu_pub.publish(imu_msg)
             self.get_logger().debug(
                 f"IMU: yaw={yaw_deg:.2f}° pitch={pitch_deg:.2f}° roll={roll_deg:.2f}° | "
-                f"gyro_z={gyro_z_deg:.2f}°/s | accel_z={accel_z:.2f}m/s²"
+                f"gyro_z={gyro_z_deg_s:.2f}°/s | accel_z={accel_z:.2f}m/s²"
             )
         except Exception as e:
             self.get_logger().warning(f"Failed to publish IMU: {e}")
