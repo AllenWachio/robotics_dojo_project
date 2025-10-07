@@ -28,6 +28,16 @@ import time
 import os
 import re
 
+try:
+    import py_trees
+    import py_trees_ros
+    import rclpy
+    PY_TREES_AVAILABLE = True
+except ImportError:
+    PY_TREES_AVAILABLE = False
+    print("Warning: py_trees/rclpy not available. Only --dry-run mode will work.")
+
+
 # Guard ROS message import so dry-run works without ROS installed
 try:
     from geometry_msgs.msg import PoseWithCovarianceStamped
