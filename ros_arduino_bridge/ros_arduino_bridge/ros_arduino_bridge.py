@@ -27,8 +27,8 @@ class ROSArduinoBridge(Node):
         self.declare_parameter("base_width", 0.249000)  # Effective track width (20.8cm + 4.1cm wheel width)
         self.declare_parameter("wheel_radius", 0.0425)
         self.declare_parameter(
-            "encoder_ticks_per_rev", 373
-        )  # The measured ticks per revolution
+            "encoder_ticks_per_rev", 447
+        )  # The measured ticks per revolution (calibrated value)
 
         # Max speeds for mapping to PWM
         self.declare_parameter("max_linear_speed", 0.5)
@@ -308,9 +308,20 @@ class ROSArduinoBridge(Node):
         pitch = math.radians(pitch_deg)
         roll = math.radians(roll_deg)
         
-        # NOTE: We are NOT using angular velocity from IMU
+        # Convert RAW gyro to rad/s (for logging/debugging only)
+        # MPU6050 with FS_SEL=0 (±250°/s): LSB sensitivity = 131 LSB/(°/s)
+        gyro_scale = 131.0  # LSB per degree/second
+        gyro_x_dps = gyro_x_raw / gyro_scale  # degrees per second
+        gyro_y_dps = gyro_y_raw / gyro_scale
+        gyro_z_dps = gyro_z_raw / gyro_scale
+        gyro_x = math.radians(gyro_x_dps)  # convert to rad/s
+        gyro_y = math.radians(gyro_y_dps)
+        gyro_z = math.radians(gyro_z_dps)  # CRITICAL: Define gyro_z to prevent NameError
+        
+        # NOTE: We are NOT using angular velocity from IMU in the EKF
         # The EKF has angular velocity disabled (imu0_config line 10-12 = false)
         # This prevents gyro drift from affecting the filtered odometry
+        # We use encoder-based angular velocity instead (drift-free)
         
         # Convert RAW accel to m/s²
         # MPU6050 with AFS_SEL=0 (±2g): raw / 16384.0 = g
@@ -414,14 +425,34 @@ class ROSArduinoBridge(Node):
         # Convert m/s to PWM (-255 to +255)
         max_lin = float(self.max_linear_speed) if self.max_linear_speed != 0 else 0.5
         
-        # CRITICAL FIX: Calculate PWM for each wheel separately
-        # Previous code reused left_pwm for both left wheels - may have caused back wheel issues
+        # Calculate raw PWM for all wheels (left and right have same speed on each side)
         front_left_pwm = int((left_speed / max_lin) * 255)
         front_right_pwm = int((right_speed / max_lin) * 255)
         rear_left_pwm = int((left_speed / max_lin) * 255)
         rear_right_pwm = int((right_speed / max_lin) * 255)
         
-        # Clamp all PWM values independently
+        # CRITICAL: Dead zone compensation - motors need minimum PWM to overcome friction
+        # If PWM is below threshold, either set to 0 (stop) or boost to minimum
+        MIN_PWM = 40  # Minimum PWM to overcome motor friction/dead zone
+        
+        def apply_dead_zone(pwm_value):
+            """Apply dead zone compensation to PWM value"""
+            if pwm_value == 0:
+                return 0
+            elif 0 < pwm_value < MIN_PWM:
+                return MIN_PWM  # Boost weak positive to minimum
+            elif -MIN_PWM < pwm_value < 0:
+                return -MIN_PWM  # Boost weak negative to minimum
+            else:
+                return pwm_value  # Strong enough, use as-is
+        
+        # Apply dead zone compensation to all wheels
+        front_left_pwm = apply_dead_zone(front_left_pwm)
+        front_right_pwm = apply_dead_zone(front_right_pwm)
+        rear_left_pwm = apply_dead_zone(rear_left_pwm)
+        rear_right_pwm = apply_dead_zone(rear_right_pwm)
+        
+        # Clamp all PWM values independently to valid range
         front_left_pwm = max(-255, min(255, front_left_pwm))
         front_right_pwm = max(-255, min(255, front_right_pwm))
         rear_left_pwm = max(-255, min(255, rear_left_pwm))
@@ -434,12 +465,13 @@ class ROSArduinoBridge(Node):
         # Send command
         success = self.send_command(command)
         
-        # Enhanced debug logging
-        if angular != 0.0:  # Log turns explicitly
+        # Enhanced debug logging - ALWAYS log to see actual PWM values
+        if abs(linear) > 0.01 or abs(angular) > 0.01:  # Any motion command
             self.get_logger().info(
-                f"TURN: linear={linear:.3f} angular={angular:.3f} | "
-                f"FL={front_left_pwm} FR={front_right_pwm} RL={rear_left_pwm} RR={rear_right_pwm} | "
-                f"cmd='{command}' success={success}"
+                f"CMD_VEL: lin={linear:.3f} ang={angular:.3f} | "
+                f"Speeds: L={left_speed:.3f} R={right_speed:.3f} | "
+                f"PWM: M1(FL)={front_left_pwm:4d} M2(FR)={front_right_pwm:4d} M3(RL)={rear_left_pwm:4d} M4(RR)={rear_right_pwm:4d} | "
+                f"Command: '{command}' sent={success}"
             )
         else:
             self.get_logger().debug(
