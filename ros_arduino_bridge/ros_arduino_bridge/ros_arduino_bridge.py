@@ -231,13 +231,24 @@ class ROSArduinoBridge(Node):
             self.imu_calibrated = True  # Don't retry forever
 
     def send_command(self, command):
-        """Send command to Arduino with thread safety"""
+        """Send command to Arduino with thread safety and verification"""
         with self.serial_lock:
             if self.serial and self.serial.is_open:
                 try:
+                    # Clear any stale data in input buffer first
+                    if self.serial.in_waiting > 0:
+                        stale = self.serial.read_all().decode('utf-8', errors='ignore')
+                        self.get_logger().warn(f"Cleared stale buffer: '{stale}'")
+                    
+                    # Send command with carriage return
                     full_command = command + "\r"
                     self.serial.write(full_command.encode())
                     self.serial.flush()
+                    
+                    # Log for motor commands (debug)
+                    if command.startswith('m '):
+                        self.get_logger().info(f"→ SENT: '{full_command.strip()}'")
+                    
                     return True
                 except Exception as e:
                     self.get_logger().error(f"Error sending command: {e}")
@@ -277,8 +288,9 @@ class ROSArduinoBridge(Node):
           "yaw pitch roll gyro_x gyro_y gyro_z accel_x accel_y accel_z"
         Example: "45.30 2.10 -1.50 23.0 -4.1 1.2 512.0 514.2 490.1"
         
-        Arduino sends:
-        - yaw, pitch, roll: degrees (from DMP)
+        Arduino sends ALL VALUES IN DEGREES:
+        - yaw: -180° to +180° (negative=left, positive=right) ← Standard convention
+        - pitch, roll: degrees (from DMP)
         - gyro_x/y/z: RAW register values (need conversion to rad/s)
         - accel_x/y/z: RAW register values (need conversion to m/s²)
         """
@@ -292,7 +304,7 @@ class ROSArduinoBridge(Node):
         except (ValueError, AttributeError):
             return  # Can't parse as floats
         
-        # Extract values
+        # Extract values (ALL IN DEGREES from Arduino!)
         yaw_deg, pitch_deg, roll_deg = values[0], values[1], values[2]
         gyro_x_raw, gyro_y_raw, gyro_z_raw = values[3], values[4], values[5]
         accel_x_raw, accel_y_raw, accel_z_raw = values[6], values[7], values[8]
@@ -303,10 +315,12 @@ class ROSArduinoBridge(Node):
             gyro_y_raw -= self.imu_gyro_bias[1]
             gyro_z_raw -= self.imu_gyro_bias[2]
         
-        # Convert angles to radians
-        yaw = math.radians(yaw_deg)
-        pitch = math.radians(pitch_deg)
-        roll = math.radians(roll_deg)
+        # CRITICAL: Convert angles from DEGREES to RADIANS for ROS!
+        # Arduino convention: yaw -180° to +180° (negative=left, positive=right)
+        # ROS convention: radians, same sign convention
+        yaw = math.radians(yaw_deg)      # -π to +π
+        pitch = math.radians(pitch_deg)  # -π to +π
+        roll = math.radians(roll_deg)    # -π to +π
         
         # Convert RAW gyro to rad/s (for logging/debugging only)
         # MPU6050 with FS_SEL=0 (±250°/s): LSB sensitivity = 131 LSB/(°/s)
@@ -319,9 +333,9 @@ class ROSArduinoBridge(Node):
         gyro_z = math.radians(gyro_z_dps)  # CRITICAL: Define gyro_z to prevent NameError
         
         # NOTE: We are NOT using angular velocity from IMU in the EKF
-        # The EKF has angular velocity disabled (imu0_config line 10-12 = false)
+        # The EKF uses ONLY yaw orientation (imu0_config: only yaw enabled)
         # This prevents gyro drift from affecting the filtered odometry
-        # We use encoder-based angular velocity instead (drift-free)
+        # Gyro is only for logging/debugging
         
         # Convert RAW accel to m/s²
         # MPU6050 with AFS_SEL=0 (±2g): raw / 16384.0 = g

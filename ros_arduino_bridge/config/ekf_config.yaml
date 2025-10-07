@@ -26,55 +26,70 @@ ekf_filter_node:
     base_link_frame: base_link
     world_frame: odom # For odometry-only fusion (not SLAM localization)
 
-    # ---------------------------------------------
+    # ============================================
     # Input Source 1: Wheel Odometry (/odom)
-    # ---------------------------------------------
+    # ============================================
+    # Strategy: Use ONLY linear velocities from encoders
+    # Let EKF integrate velocity with IMU yaw to get position
+    # This prevents encoder slip from affecting orientation
     odom0: /odom
     odom0_config: [
         false,
         false,
-        false, # x, y, z position (DISABLED - let EKF integrate from velocities only!)
+        false, # x, y, z position (DISABLED - let EKF integrate from velocities)
         false,
         false,
-        false, # roll, pitch, yaw orientation (DISABLED - use IMU orientation instead)
+        false, # roll, pitch, yaw orientation (DISABLED - use IMU yaw instead!)
         true,
         true,
-        false, # x_vel, y_vel, z_vel (USE wheel velocities - this is the ONLY encoder data we trust)
+        false, # x_vel, y_vel, z_vel (ENABLED - encoders good for velocity)
         false,
         false,
-        true, # yaw_vel (CRITICAL: USE encoder angular velocity - drift-free!)
+        false, # roll_vel, pitch_vel, yaw_vel (DISABLED - use IMU yaw directly!)
         false,
         false,
-        false, # x_accel, y_accel, z_accel
+        false, # x_accel, y_accel, z_accel (not provided)
       ]
-    odom0_queue_size: 2 # Reduced from 10 to minimize processing
-    odom0_differential: false # Velocities are inherently differential
+    odom0_queue_size: 2
+    odom0_differential: false
     odom0_relative: false
+    
+    # Covariance: Higher values = less trust
+    # Encoders slip during turns, so give them medium trust for velocity
+    odom0_twist_covariance: [
+        0.1,  0.0,  0.0,  0.0,  0.0,  0.0,   # vx: medium (encoders slip)
+        0.0,  0.1,  0.0,  0.0,  0.0,  0.0,   # vy: medium
+        0.0,  0.0,  1e6,  0.0,  0.0,  0.0,   # vz: not used
+        0.0,  0.0,  0.0,  1e6,  0.0,  0.0,   # vroll: not used
+        0.0,  0.0,  0.0,  0.0,  1e6,  0.0,   # vpitch: not used
+        0.0,  0.0,  0.0,  0.0,  0.0,  1e6    # vyaw: DISABLED (use IMU yaw!)
+      ]
 
-    # ---------------------------------------------
-    # Input Source 2: IMU (/imu/data) - Full 9-DOF
-    # ---------------------------------------------
+    # ============================================
+    # Input Source 2: IMU (/imu/data) - DMP Orientation
+    # ============================================
+    # Strategy: Use ONLY yaw orientation from DMP (drift-free!)
+    # Do NOT use angular velocity (raw gyro drifts even with calibration)
+    # Do NOT use acceleration (too noisy for position estimation)
     imu0: /imu/data
-    # UPDATED: Disable angular velocity and acceleration - they cause drift!
-    # Use ONLY orientation from DMP (most reliable)
     imu0_config: [
         false,
         false,
         false, # x, y, z position (IMU doesn't provide position)
-        true,
-        true,
-        true, # roll, pitch, yaw orientation (USE DMP - very stable and drift-free)
+        false,
+        false,
+        true, # roll, pitch, yaw: ONLY YAW ENABLED (DMP yaw is drift-free!)
         false,
         false,
         false, # x_vel, y_vel, z_vel (not provided by IMU)
         false,
         false,
-        false, # roll_vel, pitch_vel, yaw_vel (DISABLED - raw gyro causes drift!)
+        false, # roll_vel, pitch_vel, yaw_vel (DISABLED - raw gyro drifts!)
         false,
         false,
-        false, # x_accel, y_accel, z_accel (DISABLED - too noisy, causes position drift)
+        false, # x_accel, y_accel, z_accel (DISABLED - too noisy)
       ]
-    imu0_queue_size: 5 # Slightly larger to smooth bursts
+    imu0_queue_size: 5
     imu0_differential: false
     imu0_relative: false
     
@@ -82,123 +97,54 @@ ekf_filter_node:
     # Must match the frame_id in Imu messages and static TF
     imu0_frame_id: imu_link
 
-    # Remove gravitational acceleration from IMU linear accel before fusion
-    # This helps isolate actual robot motion from gravity
-    imu0_remove_gravitational_acceleration: true
+    # Don't remove gravity - we're not using acceleration anyway
+    imu0_remove_gravitational_acceleration: false
 
-    # Measurement covariances - tune these to balance trust between sensors
-    # CRITICAL FOR DRIFT PREVENTION:
-    # - Orientation covariance REDUCED (DMP is very stable)
-    # - Gyro/Accel covariances NOT USED (disabled above to prevent drift)
-    imu0_orientation_covariance: [0.001, 0.0, 0.0,
-                                   0.0, 0.001, 0.0,
-                                   0.0, 0.0, 0.002]  # DMP orientation is excellent - trust it!
+    # Covariance: VERY LOW for yaw (DMP is excellent!)
+    # Roll/pitch not used in 2D mode but set high to be safe
+    imu0_orientation_covariance: [
+        1e6,  0.0,  0.0,    # roll: not used (2D mode)
+        0.0,  1e6,  0.0,    # pitch: not used (2D mode)
+        0.0,  0.0,  0.0005  # yaw: VERY LOW (trust DMP yaw completely!)
+      ]
     
-    # These are not used since gyro/accel are disabled, but keep for reference
-    imu0_angular_velocity_covariance: [0.1, 0.0, 0.0,
-                                        0.0, 0.1, 0.0,
-                                        0.0, 0.0, 0.1]  # High values = low trust
+    # Angular velocity: not used, set high to be safe
+    imu0_angular_velocity_covariance: [
+        1e6, 0.0, 0.0,
+        0.0, 1e6, 0.0,
+        0.0, 0.0, 1e6    # All disabled - don't use raw gyro
+      ]
     
-    imu0_linear_acceleration_covariance: [1.0, 0.0, 0.0,
-                                           0.0, 1.0, 0.0,
-                                           0.0, 0.0, 1.0]  # High values = low trust
+    # Acceleration: not used, set high to be safe
+    imu0_linear_acceleration_covariance: [
+        1e6, 0.0, 0.0,
+        0.0, 1e6, 0.0,
+        0.0, 0.0, 1e6    # All disabled - too noisy
+      ]
 
-    # ---------------------------------------------
+    # ============================================
     # Process Noise Covariance
-    # ---------------------------------------------
-    # How much we expect the state to change between measurements
-    # Tune these if the filter is too "jumpy" (decrease) or too "sluggish" (increase)
+    # ============================================
+    # How much we expect each state variable to change between updates
+    # Lower values = more trust in prediction, higher = more trust in measurements
+    # CRITICAL: Low yaw process noise because IMU yaw is very stable!
     process_noise_covariance: [
-        0.05,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0, # x
-        0.0,
-        0.05,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0, # y
-        0.0,
-        0.0,
-        0.06,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0, # z
-        0.0,
-        0.0,
-        0.0,
-        0.03,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0, # roll
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.03,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0, # pitch
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.06,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0, # yaw
+        0.05,  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,  # x: position changes
+        0, 0.05,  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,  # y: position changes
+        0, 0, 0.06, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,   # z: not used
+        0, 0, 0, 0.03, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,   # roll: not used
+        0, 0, 0, 0, 0.03, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,   # pitch: not used
+        0, 0, 0, 0, 0, 0.001, 0, 0, 0, 0, 0, 0, 0, 0, 0,  # yaw: VERY LOW (IMU stable!)
+        0, 0, 0, 0, 0, 0, 0.025, 0, 0, 0, 0, 0, 0, 0, 0,  # vx: velocity changes
+        0, 0, 0, 0, 0, 0, 0, 0.025, 0, 0, 0, 0, 0, 0, 0,  # vy: velocity changes
+        0, 0, 0, 0, 0, 0, 0, 0, 0.04, 0, 0, 0, 0, 0, 0,   # vz: not used
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0.01, 0, 0, 0, 0, 0,   # vroll: not used
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.01, 0, 0, 0, 0,   # vpitch: not used
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.001, 0, 0, 0,  # vyaw: LOW (IMU corrects)
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.01, 0, 0,   # ax: not used
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.01, 0,   # ay: not used
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.015   # az: not used
+      ]
         0.0,
         0.0,
         0.0,
