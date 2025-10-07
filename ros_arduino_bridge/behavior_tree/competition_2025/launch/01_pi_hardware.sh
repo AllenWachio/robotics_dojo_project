@@ -79,10 +79,20 @@ echo ""
 echo "🚀 Starting hardware nodes..."
 echo ""
 
-# Launch all Pi hardware
-ros2 launch ros_arduino_bridge pi_competition_hardware.launch.py \
-    arduino_port:="$ARDUINO_PORT" \
-    lidar_port:="$LIDAR_PORT"
+# Launch Pi hardware using YOUR EXISTING launch files!
+echo "   Starting Arduino + LiDAR..."
+ros2 launch ros_arduino_bridge pi_robot_hardware.launch.py \
+    arduino_port:="$ARDUINO_PORT" &
+
+# Wait a moment for hardware to initialize
+sleep 2
+
+echo "   Starting Pi Camera with compression..."
+ros2 launch rpi_camera_package camera_compressed.launch.py \
+    video_device:=/dev/video0 \
+    jpeg_quality:=80
+
+# Note: Both launch files will run. Press Ctrl+C to stop all.
 
 echo ""
 echo "════════════════════════════════════════════════════════════════"

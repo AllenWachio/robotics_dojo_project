@@ -64,16 +64,42 @@ from behaviors import (
 
 
 # ========================================
-# COMPETITION WAYPOINTS
+# COMPETITION WAYPOINTS (in map frame meters)
 # ========================================
+# Field dimensions: 2400mm x 2011mm
+# Map origin: (-0.474, -2.22, 0) with 0.05m/pixel resolution
+# 
+# WAYPOINT CALCULATION FROM FIELD IMAGE:
+# ----------------------------------------
+# Grey X (Start): Left side, ~300mm from left, ~300mm from bottom
+#   → Pixel: (300/50, 300/50) = (6, 6) → Map: (-0.474 + 0.3, -2.22 + 0.3) = (-0.17, -1.92)
+#
+# Green X (Disease Detection): Left side, ~300mm from left, ~1000mm from bottom  
+#   → Pixel: (300/50, 1000/50) = (6, 20) → Map: (-0.474 + 0.3, -2.22 + 1.0) = (-0.17, -1.22)
+#
+# Blue Region (Loading Bay): Top-left, ~518mm from left, ~1700mm from bottom
+#   → Pixel: (518/50, 1700/50) = (10.36, 34) → Map: (-0.474 + 0.518, -2.22 + 1.7) = (0.044, -0.52)
+#
+# Orange Region (Delivery Bay): Right side, multiple zones around ~1800-2100mm from left
+#   Red zone: ~1800mm from left, ~1200mm from bottom
+#     → Map: (-0.474 + 1.8, -2.22 + 1.2) = (1.326, -1.02)
+#   Blue zone: ~1800mm from left, ~800mm from bottom
+#     → Map: (-0.474 + 1.8, -2.22 + 0.8) = (1.326, -1.42)
+#   Green zone: ~1800mm from left, ~400mm from bottom
+#     → Map: (-0.474 + 1.8, -2.22 + 0.4) = (1.326, -1.82)
+#
+# Maze entrance: Between loading bay and delivery bay, ~1200mm from left, ~1000mm from bottom
+#   → Map: (-0.474 + 1.2, -2.22 + 1.0) = (0.726, -1.22)
+# ----------------------------------------
+
 WAYPOINTS = {
-    'start': (0.0, 0.0),
-    'disease_station': (0.5, 1.5),
-    'loading_bay': (0.3, 0.8),
-    'maze_entrance': (0.8, 0.0),
-    'green_delivery': (1.5, -1.5),
-    'red_delivery': (1.5, -0.8),
-    'blue_delivery': (1.5, -0.2),
+    'start': (-0.17, -1.92),              # Grey X - Robot starting position
+    'disease_station': (-0.17, -1.22),    # Green X - Plant inspection station
+    'loading_bay': (0.044, -0.52),        # Blue region - Cargo pickup
+    'maze_entrance': (0.726, -1.22),      # Midpoint before delivery zones
+    'red_delivery': (1.326, -1.02),       # Orange region - Red cargo zone
+    'blue_delivery': (1.326, -1.42),      # Orange region - Blue cargo zone  
+    'green_delivery': (1.326, -1.82),     # Orange region - Green cargo zone
 }
 
 
@@ -241,18 +267,21 @@ def main():
         
         time.sleep(1.0)
         
+        # Set initial pose to actual starting position from field
         initial_pose = PoseWithCovarianceStamped()
         initial_pose.header.frame_id = 'map'
         initial_pose.header.stamp = tree.node.get_clock().now().to_msg()
-        initial_pose.pose.pose.position.x = 0.0
-        initial_pose.pose.pose.position.y = 0.0
+        initial_pose.pose.pose.position.x = WAYPOINTS['start'][0]
+        initial_pose.pose.pose.position.y = WAYPOINTS['start'][1]
         initial_pose.pose.pose.position.z = 0.0
-        initial_pose.pose.pose.orientation.w = 1.0
+        initial_pose.pose.pose.orientation.w = 1.0  # Facing forward (0° yaw)
         
+        # Publish multiple times to ensure AMCL receives it
         for _ in range(5):
             initial_pose_pub.publish(initial_pose)
             time.sleep(0.1)
         
+        print(f"📍 Initial pose set to: {WAYPOINTS['start']}")
         print("\n" + "="*60)
         print("🏁 COMPETITION MISSION STARTING")
         print("="*60 + "\n")

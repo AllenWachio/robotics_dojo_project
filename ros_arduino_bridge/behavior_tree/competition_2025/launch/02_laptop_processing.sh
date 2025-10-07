@@ -89,13 +89,27 @@ echo ""
 echo "🚀 Starting laptop processing..."
 echo ""
 
-# Launch laptop navigation + vision processing
-ros2 launch ros_arduino_bridge laptop_competition_processing.launch.py \
+# Launch laptop Nav2 using YOUR EXISTING launch file!
+# This uses: ros_arduino_bridge/deployment/laptop/launch/laptop_navigation.launch.py
+ros2 launch ros_arduino_bridge laptop_navigation.launch.py \
     map_file:="${MAP_NAME}.yaml" \
-    map_path:="$MAP_PATH" \
-    use_rviz:=true \
-    use_disease_detection:=true \
-    use_color_detection:=true
+    map_path:="$MAP_PATH/" \
+    use_rviz:=true &
+
+# Wait for Nav2 to start
+sleep 5
+
+echo ""
+echo "🎥 Starting vision processing..."
+echo ""
+
+# Launch camera processing using YOUR EXISTING launch file!
+# This uses: rpi_camera_package/launch/laptop/full_processing.launch.py
+ros2 launch rpi_camera_package full_processing.launch.py \
+    use_compressed:=true \
+    display_color:=false \
+    display_disease:=false \
+    inference_rate:=1.0
 
 echo ""
 echo "════════════════════════════════════════════════════════════════"

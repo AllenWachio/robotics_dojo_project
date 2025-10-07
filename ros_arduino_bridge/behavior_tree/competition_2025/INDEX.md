@@ -19,21 +19,28 @@
 
 ### **Technical Reference**
 
-3. **[ARCHITECTURE_EXPLAINED.md](ARCHITECTURE_EXPLAINED.md)** 🎯
+3. **[PYTREES_COMPARISON.md](PYTREES_COMPARISON.md)** 🔍
+
+   - Reference code vs our implementation
+   - What we learned and adopted
+   - How waypoints were calculated
+   - Key improvements made
+
+4. **[ARCHITECTURE_EXPLAINED.md](ARCHITECTURE_EXPLAINED.md)** 🎯
 
    - Pi vs Laptop responsibilities
    - Data flow examples
    - Why this approach works
    - Before/after comparison
 
-4. **[VISUAL_DIAGRAMS.md](VISUAL_DIAGRAMS.md)** 🎨
+5. **[VISUAL_DIAGRAMS.md](VISUAL_DIAGRAMS.md)** 🎨
 
    - System architecture diagram
    - Autonomy loop flowchart
    - Command flow example
    - Timeline visualization
 
-5. **[README.md](README.md)** 📚
+6. **[README.md](README.md)** 📚
    - Code organization
    - Behavior node details
    - Waypoint configuration
@@ -67,6 +74,10 @@ competition_2025/
 │
 ├── 📚 Documentation
 │   ├── QUICK_START.md              ⚡ Start here for competition!
+│   ├── UPDATE_SUMMARY.md           📝 Latest changes (waypoints updated!)
+│   ├── FIELD_MAP.md                🗺️ Field layout with coordinates
+│   ├── PYTREES_COMPARISON.md       🔍 Reference code analysis
+│   ├── USING_EXISTING_FILES.md     🔗 Shows which of YOUR files are used
 │   ├── DEPLOYMENT_GUIDE.md         📘 Full deployment guide
 │   ├── ARCHITECTURE_EXPLAINED.md   🎯 Split architecture explained
 │   ├── VISUAL_DIAGRAMS.md          🎨 System diagrams
@@ -347,6 +358,9 @@ You now have everything needed:
 **Quick Links:**
 
 - Start: [QUICK_START.md](QUICK_START.md)
+- **NEW**: [UPDATE_SUMMARY.md](UPDATE_SUMMARY.md) ← What changed!
+- **NEW**: [FIELD_MAP.md](FIELD_MAP.md) ← Field coordinates
+- Comparison: [PYTREES_COMPARISON.md](PYTREES_COMPARISON.md)
 - Deploy: [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md)
 - Understand: [ARCHITECTURE_EXPLAINED.md](ARCHITECTURE_EXPLAINED.md)
 - Visualize: [VISUAL_DIAGRAMS.md](VISUAL_DIAGRAMS.md)
