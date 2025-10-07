@@ -50,12 +50,24 @@ def generate_launch_description():
     
     # Static Transform: base_link → imu_link
     # IMPORTANT: Adjust x, y, z to match your IMU's actual position on the robot!
-    # Current values: IMU is at robot center, 5cm above base_link
+    # Current values: IMU is UNDER base_link (negative z)
+    # 
+    # Coordinate system (from robot's perspective):
+    #   x = forward/backward (+ forward, - backward)
+    #   y = left/right (+ left, - right)
+    #   z = up/down (+ up, - down)
+    #
+    # Example measurements:
+    #   - IMU 3cm below base_link center → z = -0.03
+    #   - IMU 5cm below, 2cm forward → x = 0.02, z = -0.05
+    #
+    # TODO: MEASURE YOUR ACTUAL IMU POSITION AND UPDATE THESE VALUES!
     imu_static_tf = Node(
         package='tf2_ros',
         executable='static_transform_publisher',
         name='base_to_imu_tf',
-        arguments=['0', '0', '0.05', '0', '0', '0', 'base_link', 'imu_link'],
+        arguments=['0', '0', '-0.03', '0', '0', '0', 'base_link', 'imu_link'],
+        #          x    y    z=-3cm  roll pitch yaw
         output='screen'
     )
     
