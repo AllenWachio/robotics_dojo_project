@@ -79,6 +79,10 @@ class ROSArduinoBridge(Node):
         self.imu_gyro_bias = [0.0, 0.0, 0.0]  # Gyro bias (raw units)
         self.imu_calibration_samples = 0
         
+        # IMU yaw differentiation (compute angular velocity from drift-free DMP yaw)
+        self.last_imu_yaw = None  # Previous yaw value (radians)
+        self.last_imu_time = None  # Previous timestamp
+        
         # Start calibration after a short delay (let Arduino stabilize)
         self.create_timer(3.0, self.calibrate_imu_once)
 
@@ -308,27 +312,45 @@ class ROSArduinoBridge(Node):
         pitch = math.radians(pitch_deg)
         roll = math.radians(roll_deg)
         
-        # Convert RAW gyro to rad/s
-        # MPU6050 with FS_SEL=0 (±250°/s): raw / 131.0 = deg/s
-        # Then convert deg/s to rad/s
-        gyro_scale = 131.0  # LSB/(deg/s) for ±250°/s range
-        gyro_x_deg_s = gyro_x_raw / gyro_scale
-        gyro_y_deg_s = gyro_y_raw / gyro_scale
-        gyro_z_deg_s = gyro_z_raw / gyro_scale
+        # CRITICAL FIX: Compute angular velocity by differentiating DMP yaw (drift-free!)
+        # This is MUCH better than using raw gyro which drifts over time
+        current_time = self.get_clock().now()
         
-        # Apply dead zone to eliminate drift when stationary
-        # If gyro value is below threshold, set to zero
-        gyro_deadzone = 0.5  # degrees per second
-        if abs(gyro_x_deg_s) < gyro_deadzone:
-            gyro_x_deg_s = 0.0
-        if abs(gyro_y_deg_s) < gyro_deadzone:
-            gyro_y_deg_s = 0.0
-        if abs(gyro_z_deg_s) < gyro_deadzone:
-            gyro_z_deg_s = 0.0
+        if self.last_imu_yaw is not None and self.last_imu_time is not None:
+            # Calculate time difference
+            dt = (current_time - self.last_imu_time).nanoseconds / 1e9
+            
+            if dt > 0.001:  # Avoid division by zero
+                # Calculate yaw change (handle wraparound at ±π)
+                yaw_diff = yaw - self.last_imu_yaw
+                
+                # Normalize angle difference to [-π, π]
+                while yaw_diff > math.pi:
+                    yaw_diff -= 2 * math.pi
+                while yaw_diff < -math.pi:
+                    yaw_diff += 2 * math.pi
+                
+                # Compute angular velocity from yaw change
+                gyro_z = yaw_diff / dt
+                
+                # Apply dead zone to eliminate noise when stationary
+                gyro_deadzone = 0.01  # rad/s (~0.57°/s)
+                if abs(gyro_z) < gyro_deadzone:
+                    gyro_z = 0.0
+            else:
+                gyro_z = 0.0
+        else:
+            # First reading - no previous data to differentiate
+            gyro_z = 0.0
         
-        gyro_x = math.radians(gyro_x_deg_s)
-        gyro_y = math.radians(gyro_y_deg_s)
-        gyro_z = math.radians(gyro_z_deg_s)
+        # Update previous values for next iteration
+        self.last_imu_yaw = yaw
+        self.last_imu_time = current_time
+        
+        # For roll and pitch rates, we don't have DMP data, so use raw gyro with caution
+        # In practice, for 2D navigation, only yaw rate matters
+        gyro_x = 0.0  # Not used in 2D mode
+        gyro_y = 0.0  # Not used in 2D mode
         
         # Convert RAW accel to m/s²
         # MPU6050 with AFS_SEL=0 (±2g): raw / 16384.0 = g
@@ -398,7 +420,7 @@ class ROSArduinoBridge(Node):
             self.imu_pub.publish(imu_msg)
             self.get_logger().debug(
                 f"IMU: yaw={yaw_deg:.2f}° pitch={pitch_deg:.2f}° roll={roll_deg:.2f}° | "
-                f"gyro_z={gyro_z_deg_s:.2f}°/s | accel_z={accel_z:.2f}m/s²"
+                f"gyro_z={math.degrees(gyro_z):.2f}°/s (computed from yaw diff) | accel_z={accel_z:.2f}m/s²"
             )
         except Exception as e:
             self.get_logger().warning(f"Failed to publish IMU: {e}")
