@@ -6,7 +6,7 @@ ros_arduino_bridge:
   ros__parameters:
     base_width: 0.208000 # Distance between left and right wheels (meters)
     wheel_radius: 0.042500 # Wheel radius (meters)
-    encoder_ticks_per_rev: 870 # Encoder ticks per wheel revolution
+    encoder_ticks_per_rev: 447 # Encoder ticks per wheel revolution (calibrated)
     odom_frame: "odom"
     base_frame: "base_link"
     imu_frame: "imu_link"

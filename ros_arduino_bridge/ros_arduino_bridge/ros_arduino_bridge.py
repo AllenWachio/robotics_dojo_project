@@ -27,8 +27,8 @@ class ROSArduinoBridge(Node):
         self.declare_parameter("base_width", 0.249000)  # Effective track width (20.8cm + 4.1cm wheel width)
         self.declare_parameter("wheel_radius", 0.0425)
         self.declare_parameter(
-            "encoder_ticks_per_rev", 373
-        )  # The measured ticks per revolution
+            "encoder_ticks_per_rev", 447
+        )  # Calibrated ticks per revolution
 
         # Max speeds for mapping to PWM
         self.declare_parameter("max_linear_speed", 0.5)
