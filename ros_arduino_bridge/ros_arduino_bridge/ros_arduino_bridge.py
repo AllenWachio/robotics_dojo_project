@@ -79,10 +79,6 @@ class ROSArduinoBridge(Node):
         self.imu_gyro_bias = [0.0, 0.0, 0.0]  # Gyro bias (raw units)
         self.imu_calibration_samples = 0
         
-        # IMU yaw differentiation (compute angular velocity from drift-free DMP yaw)
-        self.last_imu_yaw = None  # Previous yaw value (radians)
-        self.last_imu_time = None  # Previous timestamp
-        
         # Start calibration after a short delay (let Arduino stabilize)
         self.create_timer(3.0, self.calibrate_imu_once)
 
@@ -312,45 +308,9 @@ class ROSArduinoBridge(Node):
         pitch = math.radians(pitch_deg)
         roll = math.radians(roll_deg)
         
-        # CRITICAL FIX: Compute angular velocity by differentiating DMP yaw (drift-free!)
-        # This is MUCH better than using raw gyro which drifts over time
-        current_time = self.get_clock().now()
-        
-        if self.last_imu_yaw is not None and self.last_imu_time is not None:
-            # Calculate time difference
-            dt = (current_time - self.last_imu_time).nanoseconds / 1e9
-            
-            if dt > 0.001:  # Avoid division by zero
-                # Calculate yaw change (handle wraparound at ±π)
-                yaw_diff = yaw - self.last_imu_yaw
-                
-                # Normalize angle difference to [-π, π]
-                while yaw_diff > math.pi:
-                    yaw_diff -= 2 * math.pi
-                while yaw_diff < -math.pi:
-                    yaw_diff += 2 * math.pi
-                
-                # Compute angular velocity from yaw change
-                gyro_z = yaw_diff / dt
-                
-                # Apply dead zone to eliminate noise when stationary
-                gyro_deadzone = 0.01  # rad/s (~0.57°/s)
-                if abs(gyro_z) < gyro_deadzone:
-                    gyro_z = 0.0
-            else:
-                gyro_z = 0.0
-        else:
-            # First reading - no previous data to differentiate
-            gyro_z = 0.0
-        
-        # Update previous values for next iteration
-        self.last_imu_yaw = yaw
-        self.last_imu_time = current_time
-        
-        # For roll and pitch rates, we don't have DMP data, so use raw gyro with caution
-        # In practice, for 2D navigation, only yaw rate matters
-        gyro_x = 0.0  # Not used in 2D mode
-        gyro_y = 0.0  # Not used in 2D mode
+        # NOTE: We are NOT using angular velocity from IMU
+        # The EKF has angular velocity disabled (imu0_config line 10-12 = false)
+        # This prevents gyro drift from affecting the filtered odometry
         
         # Convert RAW accel to m/s²
         # MPU6050 with AFS_SEL=0 (±2g): raw / 16384.0 = g
@@ -383,9 +343,11 @@ class ROSArduinoBridge(Node):
         imu_msg.orientation.w = float(qw)
         
         # Angular velocity (rad/s)
-        imu_msg.angular_velocity.x = float(gyro_x)
-        imu_msg.angular_velocity.y = float(gyro_y)
-        imu_msg.angular_velocity.z = float(gyro_z)
+        # CRITICAL: Set to ZERO since EKF has angular velocity DISABLED
+        # Publishing non-zero values here can cause the EKF to drift even when disabled
+        imu_msg.angular_velocity.x = 0.0
+        imu_msg.angular_velocity.y = 0.0
+        imu_msg.angular_velocity.z = 0.0
         
         # Linear acceleration (m/s²)
         imu_msg.linear_acceleration.x = float(accel_x)
