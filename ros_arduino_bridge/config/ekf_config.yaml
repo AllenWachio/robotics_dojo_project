@@ -42,7 +42,7 @@ ekf_filter_node:
         false, # x_vel, y_vel, z_vel (USE wheel velocities - accurate for straight motion)
         false,
         false,
-        true, # roll_vel, pitch_vel, yaw_vel (USE yaw velocity from wheels as baseline)
+        false, # roll_vel, pitch_vel, yaw_vel (DISABLED - let IMU yaw handle rotation)
         false,
         false,
         false, # x_accel, y_accel, z_accel
@@ -64,16 +64,16 @@ ekf_filter_node:
         false, # x, y, z position (IMU doesn't provide position)
         false,
         false,
-        true, # roll, pitch, yaw orientation (USE yaw from IMU - accurate heading)
+        true, # roll, pitch, yaw orientation (ONLY USE yaw/Z - stable from DMP)
         false,
         false,
         false, # x_vel, y_vel, z_vel
         false,
         false,
-        true, # roll_vel, pitch_vel, yaw_vel (USE gyro Z - corrects wheel slip!)
+        false, # roll_vel, pitch_vel, yaw_vel (DISABLED - too noisy, causes drift)
         false,
         false,
-        false, # x_accel, y_accel, z_accel - DISABLED to reduce processing
+        false, # x_accel, y_accel, z_accel - DISABLED (not needed for 2D)
       ]
     imu0_queue_size: 2 # Reduced from 10 to minimize processing
     imu0_differential: false
