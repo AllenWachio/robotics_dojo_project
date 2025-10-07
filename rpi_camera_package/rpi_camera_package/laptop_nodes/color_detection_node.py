@@ -9,6 +9,7 @@ import rclpy
 from rclpy.node import Node
 from rclpy.qos import QoSProfile, ReliabilityPolicy, HistoryPolicy, DurabilityPolicy
 from sensor_msgs.msg import Image, CompressedImage
+from std_msgs.msg import String
 from cv_bridge import CvBridge
 import cv2
 import numpy as np
@@ -68,6 +69,14 @@ class ColorDetectionNode(Node):
             )
             self.get_logger().info('✅ Publishing processed images')
         
+        # Publisher for detected colors (for behavior tree integration)
+        self.color_detected_pub = self.create_publisher(
+            String,
+            '/color_detection/detected',
+            10
+        )
+        self.get_logger().info('✅ Publishing detected colors to /color_detection/detected')
+        
         # Define color ranges in HSV format
         self.color_ranges = {
             'red': ([0, 120, 70], [10, 255, 255]),
@@ -122,10 +131,16 @@ class ColorDetectionNode(Node):
                 processed_msg.header = header
                 self.processed_pub.publish(processed_msg)
             
-            # Log detected colors
+            # Log detected colors and publish
             if detected_colors:
                 colors_str = ", ".join([f"✓ {c}" for c in detected_colors])
                 self.get_logger().info(f'Detected colors: {colors_str}')
+                
+                # Publish each detected color (behavior tree will filter for target)
+                for color in detected_colors:
+                    color_msg = String()
+                    color_msg.data = color
+                    self.color_detected_pub.publish(color_msg)
             
             # Display if enabled
             if self.display:
