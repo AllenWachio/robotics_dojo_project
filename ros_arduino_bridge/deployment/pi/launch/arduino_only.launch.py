@@ -73,7 +73,7 @@ def generate_launch_description():
             # Calibrated robot parameters
             'base_width': 0.249000,      # Effective track width (20.8cm + 4.1cm wheel width)
             'wheel_radius': 0.042500,    # 85mm diameter wheels
-            'encoder_ticks_per_rev': 447, # Calibrated encoder ticks
+            'encoder_ticks_per_rev': 373, # Measured encoder ticks
             
             # Frame names
             'odom_frame': 'odom',

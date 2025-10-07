@@ -2,8 +2,7 @@ from launch import LaunchDescription
 from launch_ros.actions import Node
 from launch.substitutions import PathJoinSubstitution, Command
 from launch_ros.substitutions import FindPackageShare
-from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
-from launch.launch_description_sources import PythonLaunchDescriptionSource
+from launch.actions import DeclareLaunchArgument
 from launch.substitutions import LaunchConfiguration
 
 def generate_launch_description():
@@ -55,7 +54,7 @@ def generate_launch_description():
             # Calibrated robot parameters
             'base_width': 0.249000,      # Effective track width (20.8cm + 4.1cm wheel width)
             'wheel_radius': 0.042500,    # 85mm diameter wheels
-            'encoder_ticks_per_rev': 447, # Calibrated encoder ticks
+            'encoder_ticks_per_rev': 373, # Measured encoder ticks
             
             # Motion limits
             #'max_linear_speed': 0.5,     # m/s
@@ -64,9 +63,6 @@ def generate_launch_description():
             # Frame names
             'odom_frame': 'odom',
             'base_frame': 'base_link',
-            
-            # CRITICAL: Disable TF publishing - EKF will handle it
-            'publish_tf': False,
         }]
     )
 
@@ -88,21 +84,6 @@ def generate_launch_description():
         output='screen'
     )
 
-    # EKF Sensor Fusion - fuses wheel odometry with IMU
-    # Publishes /odometry/filtered and odom->base_link TF
-    ekf_config_path = PathJoinSubstitution([
-        FindPackageShare('ros_arduino_bridge'),
-        'config', 'ekf_config.yaml'
-    ])
-    
-    ekf_node = Node(
-        package='robot_localization',
-        executable='ekf_node',
-        name='ekf_filter_node',
-        output='screen',
-        parameters=[ekf_config_path]
-    )
-
     return LaunchDescription([
         DeclareLaunchArgument('arduino_port', default_value=arduino_port,
                              description='Arduino serial port (device ID)'),
@@ -110,5 +91,4 @@ def generate_launch_description():
         robot_state_publisher,
         arduino_bridge,
         lidar_node,  # ESSENTIAL for SLAM to work
-        ekf_node,    # EKF sensor fusion for accurate odometry
     ])
