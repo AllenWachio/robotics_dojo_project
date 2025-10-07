@@ -76,6 +76,10 @@ ekf_filter_node:
     imu0_queue_size: 5 # Slightly larger to smooth bursts
     imu0_differential: false
     imu0_relative: false
+    
+    # CRITICAL: Tell EKF which frame the IMU is in
+    # Must match the frame_id in Imu messages and static TF
+    imu0_frame_id: imu_link
 
     # Remove gravitational acceleration from IMU linear accel before fusion
     # This helps isolate actual robot motion from gravity

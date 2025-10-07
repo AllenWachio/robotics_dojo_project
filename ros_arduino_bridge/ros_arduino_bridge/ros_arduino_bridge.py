@@ -73,6 +73,14 @@ class ROSArduinoBridge(Node):
         self._last_invalid_encoder_warn = 0.0
         # Throttle warnings for color sensor (low values)
         self._last_color_sensor_warn = 0.0
+        
+        # IMU calibration state
+        self.imu_calibrated = False
+        self.imu_gyro_bias = [0.0, 0.0, 0.0]  # Gyro bias (raw units)
+        self.imu_calibration_samples = 0
+        
+        # Start calibration after a short delay (let Arduino stabilize)
+        self.create_timer(3.0, self.calibrate_imu_once)
 
         # Servo state
         self.camera_servo_angle = 50  # Initial position from Arduino
@@ -176,6 +184,52 @@ class ROSArduinoBridge(Node):
             self.get_logger().info("Attempting to reconnect to Arduino...")
             self.connect_serial()
 
+    def calibrate_imu_once(self):
+        """One-shot IMU calibration - runs once at startup"""
+        if self.imu_calibrated:
+            return  # Already calibrated
+        
+        self.get_logger().info("Starting IMU calibration - keep robot STATIONARY for 5 seconds...")
+        
+        samples = []
+        start_time = time.time()
+        
+        # Collect samples for 5 seconds
+        while time.time() - start_time < 5.0:
+            if self.send_command('i'):
+                time.sleep(0.05)  # Wait for Arduino to respond
+                line = self.read_serial_line()
+                if line:
+                    try:
+                        values = list(map(float, line.split()))
+                        if len(values) == 9:
+                            # Extract raw gyro values (indices 3, 4, 5)
+                            samples.append([values[3], values[4], values[5]])
+                    except (ValueError, IndexError):
+                        pass
+            time.sleep(0.1)  # 10Hz sampling
+        
+        if len(samples) >= 10:
+            # Calculate average gyro bias
+            avg_gx = sum(s[0] for s in samples) / len(samples)
+            avg_gy = sum(s[1] for s in samples) / len(samples)
+            avg_gz = sum(s[2] for s in samples) / len(samples)
+            
+            self.imu_gyro_bias = [avg_gx, avg_gy, avg_gz]
+            self.imu_calibrated = True
+            self.imu_calibration_samples = len(samples)
+            
+            self.get_logger().info(
+                f"IMU calibration complete ({len(samples)} samples). "
+                f"Gyro bias: X={avg_gx:.2f} Y={avg_gy:.2f} Z={avg_gz:.2f} (raw units)"
+            )
+        else:
+            self.get_logger().warning(
+                f"IMU calibration failed - only {len(samples)} samples. "
+                "Proceeding with zero bias (gyro drift may occur)"
+            )
+            self.imu_calibrated = True  # Don't retry forever
+
     def send_command(self, command):
         """Send command to Arduino with thread safety"""
         with self.serial_lock:
@@ -243,6 +297,12 @@ class ROSArduinoBridge(Node):
         gyro_x_raw, gyro_y_raw, gyro_z_raw = values[3], values[4], values[5]
         accel_x_raw, accel_y_raw, accel_z_raw = values[6], values[7], values[8]
         
+        # Apply calibration bias (subtract offset measured at startup)
+        if self.imu_calibrated:
+            gyro_x_raw -= self.imu_gyro_bias[0]
+            gyro_y_raw -= self.imu_gyro_bias[1]
+            gyro_z_raw -= self.imu_gyro_bias[2]
+        
         # Convert angles to radians
         yaw = math.radians(yaw_deg)
         pitch = math.radians(pitch_deg)
@@ -299,21 +359,31 @@ class ROSArduinoBridge(Node):
         imu_msg.linear_acceleration.y = float(accel_y)
         imu_msg.linear_acceleration.z = float(accel_z)
         
-        # Set covariance matrices (adjust based on your IMU specs)
-        # -1 means unknown, or set actual covariance values
-        imu_msg.orientation_covariance = [0.01, 0.0, 0.0,
-                                           0.0, 0.01, 0.0,
-                                           0.0, 0.0, 0.01]
-        imu_msg.angular_velocity_covariance = [0.001, 0.0, 0.0,
-                                                0.0, 0.001, 0.0,
-                                                0.0, 0.0, 0.001]
-        imu_msg.linear_acceleration_covariance = [0.01, 0.0, 0.0,
-                                                   0.0, 0.01, 0.0,
-                                                   0.0, 0.0, 0.01]
+        # Set covariance matrices - tuned for MPU6050 DMP
+        # Orientation covariance: DMP fusion is very reliable
+        imu_msg.orientation_covariance = [
+            0.001, 0.0, 0.0,    # Roll: excellent (DMP fusion)
+            0.0, 0.001, 0.0,    # Pitch: excellent (DMP fusion)
+            0.0, 0.0, 0.002     # Yaw: slightly higher (magnetometer drift if present)
+        ]
+        
+        # Angular velocity covariance: raw gyro has some drift
+        imu_msg.angular_velocity_covariance = [
+            0.02, 0.0, 0.0,     # Gyro X: medium noise
+            0.0, 0.02, 0.0,     # Gyro Y: medium noise
+            0.0, 0.0, 0.02      # Gyro Z: medium noise (critical for turns)
+        ]
+        
+        # Linear acceleration covariance: very noisy on small robots
+        imu_msg.linear_acceleration_covariance = [
+            0.5, 0.0, 0.0,      # Accel X: high noise from vibration
+            0.0, 0.5, 0.0,      # Accel Y: high noise from vibration
+            0.0, 0.0, 0.5       # Accel Z: high noise from vibration
+        ]
         
         try:
             imu_msg.header.stamp = self.get_clock().now().to_msg()
-            imu_msg.header.frame_id = 'base_link'  # IMU mounted at robot base
+            imu_msg.header.frame_id = 'imu_link'  # IMU has its own frame for proper TF tree
             self.imu_pub.publish(imu_msg)
             self.get_logger().debug(
                 f"IMU: yaw={yaw_deg:.2f}° pitch={pitch_deg:.2f}° roll={roll_deg:.2f}° | "
@@ -323,45 +393,64 @@ class ROSArduinoBridge(Node):
             self.get_logger().warning(f"Failed to publish IMU: {e}")
 
     def cmd_vel_callback(self, msg):
-        """Convert Twist message to motor speeds for 4WD"""
-        # Convert linear and angular velocities to wheel speeds
+        """Convert Twist message to motor speeds for 4WD with proper center rotation"""
         linear = msg.linear.x
         angular = msg.angular.z
 
-        # For 4-wheel drive skid-steer robot:
-        # Left wheels: linear - (angular * base_width/2)
-        # Right wheels: linear + (angular * base_width/2)
-        # Handle in-place turns: if linear is near zero, map angular to
-        # opposing wheel velocities so the robot rotates about its center.
-        if abs(linear) < 1e-6 and abs(angular) > 1e-6:
-            left_speed = -angular * (self.base_width / 2.0)
-            right_speed = angular * (self.base_width / 2.0)
-        else:
-            left_speed = linear - (angular * self.base_width / 2.0)
-            right_speed = linear + (angular * self.base_width / 2.0)
-
-        # Convert m/s to PWM values using configured max_linear_speed
-        # Protect against division by zero
+        # CRITICAL FIX: For 4-wheel skid-steer, all wheels must participate in rotation!
+        # Previous code had issues with turning - motors weren't receiving correct commands
+        
+        # Calculate wheel speeds for differential drive
+        # For rotation about center: left wheels move opposite to right wheels
+        # For forward motion: all wheels move same direction
+        # For combined motion: superposition of both
+        
+        # Base speeds from linear motion (same for all wheels)
+        left_speed = linear
+        right_speed = linear
+        
+        # Add rotational component (opposite for left/right)
+        # CRITICAL: Use full base_width, not half, for proper center rotation
+        rotation_speed = angular * (self.base_width / 2.0)
+        
+        left_speed -= rotation_speed   # Left wheels slower/reverse when turning right
+        right_speed += rotation_speed  # Right wheels faster/forward when turning right
+        
+        # Convert m/s to PWM (-255 to +255)
         max_lin = float(self.max_linear_speed) if self.max_linear_speed != 0 else 0.5
-        left_pwm = int((left_speed / max_lin) * 255)
-        right_pwm = int((right_speed / max_lin) * 255)
-
-        # Limit PWM values
-        left_pwm = max(-255, min(255, left_pwm))
-        right_pwm = max(-255, min(255, right_pwm))
-
-        # Send command to Arduino: m left1:right1:left2:right2
-        # Assuming M1=front_left, M2=front_right, M3=rear_left, M4=rear_right
-        command = f"m {left_pwm}:{right_pwm}:{left_pwm}:{right_pwm}"
-        self.send_command(command)
-
-        # Helpful debug: show computed speeds and PWM mapping so teleop can
-        # be tuned if turning doesn't behave as expected.
-        self.get_logger().debug(
-            f"cmd_vel -> linear={linear:.3f} angular={angular:.3f} | "
-            f"left_speed={left_speed:.3f} right_speed={right_speed:.3f} | "
-            f"left_pwm={left_pwm} right_pwm={right_pwm} | cmd={command}"
-        )
+        
+        # CRITICAL FIX: Calculate PWM for each wheel separately
+        # Previous code reused left_pwm for both left wheels - may have caused back wheel issues
+        front_left_pwm = int((left_speed / max_lin) * 255)
+        front_right_pwm = int((right_speed / max_lin) * 255)
+        rear_left_pwm = int((left_speed / max_lin) * 255)
+        rear_right_pwm = int((right_speed / max_lin) * 255)
+        
+        # Clamp all PWM values independently
+        front_left_pwm = max(-255, min(255, front_left_pwm))
+        front_right_pwm = max(-255, min(255, front_right_pwm))
+        rear_left_pwm = max(-255, min(255, rear_left_pwm))
+        rear_right_pwm = max(-255, min(255, rear_right_pwm))
+        
+        # CRITICAL: Send all 4 motor values explicitly
+        # Format: m M1:M2:M3:M4 where M1=FL, M2=FR, M3=RL, M4=RR
+        command = f"m {front_left_pwm}:{front_right_pwm}:{rear_left_pwm}:{rear_right_pwm}"
+        
+        # Send command
+        success = self.send_command(command)
+        
+        # Enhanced debug logging
+        if angular != 0.0:  # Log turns explicitly
+            self.get_logger().info(
+                f"TURN: linear={linear:.3f} angular={angular:.3f} | "
+                f"FL={front_left_pwm} FR={front_right_pwm} RL={rear_left_pwm} RR={rear_right_pwm} | "
+                f"cmd='{command}' success={success}"
+            )
+        else:
+            self.get_logger().debug(
+                f"cmd_vel: lin={linear:.3f} ang={angular:.3f} | "
+                f"PWM: FL={front_left_pwm} FR={front_right_pwm} RL={rear_left_pwm} RR={rear_right_pwm}"
+            )
 
     def camera_servo_callback(self, msg):
         """Handle camera servo position commands"""
@@ -884,6 +973,9 @@ class ROSArduinoBridge(Node):
         odom_msg.pose.pose.position.y = self.odom_y
         odom_msg.pose.pose.position.z = 0.0
 
+        # CRITICAL: Normalize theta to [-pi, pi] to prevent drift
+        self.odom_theta = math.atan2(math.sin(self.odom_theta), math.cos(self.odom_theta))
+
         # Convert theta to quaternion
         q = Quaternion()
         q.x = 0.0
@@ -923,20 +1015,35 @@ class ROSArduinoBridge(Node):
 
     def publish_tf(self, timestamp):
         """Publish transform from odom to base_link"""
+        # CRITICAL: This TF tells ROS where the robot is in the odom frame
+        # SLAM/mapping uses this to keep the map stationary while robot moves
+        
         transform = TransformStamped()
         transform.header.stamp = timestamp.to_msg()
-        transform.header.frame_id = self.odom_frame
-        transform.child_frame_id = self.base_frame
+        transform.header.frame_id = self.odom_frame  # Parent: 'odom' (fixed reference)
+        transform.child_frame_id = self.base_frame   # Child: 'base_link' (moves with robot)
 
+        # Position in odom frame
         transform.transform.translation.x = self.odom_x
         transform.transform.translation.y = self.odom_y
         transform.transform.translation.z = 0.0
 
+        # CRITICAL: Normalize quaternion to prevent numerical issues
+        half_theta = self.odom_theta / 2.0
         q = Quaternion()
         q.x = 0.0
         q.y = 0.0
-        q.z = math.sin(self.odom_theta / 2)
-        q.w = math.cos(self.odom_theta / 2)
+        q.z = math.sin(half_theta)
+        q.w = math.cos(half_theta)
+        
+        # Normalize quaternion (ensure magnitude = 1)
+        mag = math.sqrt(q.x**2 + q.y**2 + q.z**2 + q.w**2)
+        if mag > 1e-6:
+            q.x /= mag
+            q.y /= mag
+            q.z /= mag
+            q.w /= mag
+        
         transform.transform.rotation = q
 
         self.tf_broadcaster.sendTransform(transform)

@@ -7,11 +7,12 @@ Usage (on Raspberry Pi):
     ros2 launch ros_arduino_bridge sensor_fusion.launch.py
 
 This launch file:
-1. Starts the robot_localization EKF node
-2. Loads configuration from ekf_config.yaml
-3. Subscribes to /odom (wheels) and /imu/data (IMU)
-4. Publishes fused odometry to /odometry/filtered
-5. EKF publishes TF transform (odom → base_link)
+1. Publishes static transform: base_link → imu_link (IMU position)
+2. Starts the robot_localization EKF node
+3. Loads configuration from ekf_config.yaml
+4. Subscribes to /odom (wheels) and /imu/data (IMU)
+5. Publishes fused odometry to /odometry/filtered
+6. EKF publishes TF transform (odom → base_link)
 
 Prerequisites:
 - ros_arduino_bridge node must be running with publish_tf:=false
@@ -30,6 +31,8 @@ Example full launch:
 import os
 from launch import LaunchDescription
 from launch_ros.actions import Node
+from launch.actions import DeclareLaunchArgument
+from launch.substitutions import LaunchConfiguration
 from ament_index_python.packages import get_package_share_directory
 
 
@@ -37,6 +40,24 @@ def generate_launch_description():
     # Get the path to the config file
     pkg_share = get_package_share_directory('ros_arduino_bridge')
     ekf_config_path = os.path.join(pkg_share, 'config', 'ekf_config.yaml')
+    
+    # Declare launch arguments
+    use_ekf_arg = DeclareLaunchArgument(
+        'use_ekf',
+        default_value='true',
+        description='Enable EKF sensor fusion'
+    )
+    
+    # Static Transform: base_link → imu_link
+    # IMPORTANT: Adjust x, y, z to match your IMU's actual position on the robot!
+    # Current values: IMU is at robot center, 5cm above base_link
+    imu_static_tf = Node(
+        package='tf2_ros',
+        executable='static_transform_publisher',
+        name='base_to_imu_tf',
+        arguments=['0', '0', '0.05', '0', '0', '0', 'base_link', 'imu_link'],
+        output='screen'
+    )
     
     # EKF node for sensor fusion
     ekf_node = Node(
@@ -52,5 +73,7 @@ def generate_launch_description():
     )
     
     return LaunchDescription([
+        use_ekf_arg,
+        imu_static_tf,
         ekf_node
     ])
