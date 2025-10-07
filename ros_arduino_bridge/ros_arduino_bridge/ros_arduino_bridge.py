@@ -315,6 +315,17 @@ class ROSArduinoBridge(Node):
         gyro_x_deg_s = gyro_x_raw / gyro_scale
         gyro_y_deg_s = gyro_y_raw / gyro_scale
         gyro_z_deg_s = gyro_z_raw / gyro_scale
+        
+        # Apply dead zone to eliminate drift when stationary
+        # If gyro value is below threshold, set to zero
+        gyro_deadzone = 0.5  # degrees per second
+        if abs(gyro_x_deg_s) < gyro_deadzone:
+            gyro_x_deg_s = 0.0
+        if abs(gyro_y_deg_s) < gyro_deadzone:
+            gyro_y_deg_s = 0.0
+        if abs(gyro_z_deg_s) < gyro_deadzone:
+            gyro_z_deg_s = 0.0
+        
         gyro_x = math.radians(gyro_x_deg_s)
         gyro_y = math.radians(gyro_y_deg_s)
         gyro_z = math.radians(gyro_z_deg_s)
@@ -906,7 +917,8 @@ class ROSArduinoBridge(Node):
             return
 
         # Define a threshold for the minimum change in encoder counts
-        encoder_threshold = 3  # Start with a threshold of 2 ticks
+        # INCREASED to 5 to prevent encoder noise from being integrated as motion
+        encoder_threshold = 5  # Higher threshold reduces drift when stationary
 
         # Calculate wheel displacements in meters
         ticks_to_meters = (2 * math.pi * self.wheel_radius) / self.encoder_ticks_per_rev
@@ -916,12 +928,13 @@ class ROSArduinoBridge(Node):
 
         # Check if the change in encoder counts is below the threshold
         if all(abs(tick) < encoder_threshold for tick in delta_ticks):
-            # Robot is stationary - publish odometry with zero velocity
-            # Publish TF only if not using EKF (EKF will publish TF when enabled)
+            # Robot is stationary - CRITICAL: publish odometry with ZERO velocity
+            # This anchors the EKF and prevents IMU drift from accumulating
             self.publish_odometry(0.0, 0.0, current_time)
             if self.publish_tf_enabled:
                 self.publish_tf(current_time)
             self.last_odom_update = current_time
+            # IMPORTANT: Don't update last_encoder_counts - keeps threshold check consistent
             return
 
         # Calculate wheel displacements in meters
