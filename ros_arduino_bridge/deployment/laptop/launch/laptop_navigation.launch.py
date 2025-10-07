@@ -114,7 +114,8 @@ def generate_launch_description():
         executable='bt_navigator',
         name='bt_navigator',
         output='screen',
-        parameters=[configured_params]
+        parameters=[configured_params],
+        remappings=[('/odom', '/odometry/filtered')]  # Use EKF-fused odometry
     )
 
     # Nav2 Waypoint Follower - sequential goal execution
@@ -132,7 +133,8 @@ def generate_launch_description():
         executable='velocity_smoother',
         name='velocity_smoother',
         output='screen',
-        parameters=[configured_params]
+        parameters=[configured_params],
+        remappings=[('/odom', '/odometry/filtered')]  # Use EKF-fused odometry
     )
 
     # Nav2 Lifecycle Manager - manages node lifecycle
