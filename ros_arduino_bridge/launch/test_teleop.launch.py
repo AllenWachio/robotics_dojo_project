@@ -6,6 +6,8 @@ from launch.substitutions import FindExecutable
 
 def generate_launch_description():
     # Arduino Bridge Node
+    # NOTE: This is a simple teleop test WITHOUT sensor fusion
+    # So publish_tf should be True to provide odom→base_link transform
     arduino_bridge = Node(
         package='ros_arduino_bridge',
         executable='ros_arduino_bridge',
@@ -16,7 +18,10 @@ def generate_launch_description():
             'baud_rate': 57600,
             'base_width': 0.249000,      # Effective track width (20.8cm + 4.1cm wheel width)
             'wheel_radius': 0.042500,    # 85mm diameter wheels
-            'encoder_ticks_per_rev': 447  # Calibrated value
+            'encoder_ticks_per_rev': 447,  # Calibrated value
+            'max_linear_speed': 0.5,
+            'max_angular_speed': 1.0,
+            'publish_tf': True  # Enable TF since no EKF in this launch file
         }]
     )
     

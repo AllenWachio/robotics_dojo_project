@@ -67,6 +67,8 @@ def generate_launch_description():
             'base_width': 0.249000,      # Effective track width (calibrated)
             'wheel_radius': 0.042500,    # 85mm diameter wheels
             'encoder_ticks_per_rev': 447,  # Calibrated value
+            'max_linear_speed': 0.5,
+            'max_angular_speed': 1.0,
             'publish_tf': False,         # ⚠️ CRITICAL: Let EKF handle TF publishing
         }]
     )
