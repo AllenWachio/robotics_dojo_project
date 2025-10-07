@@ -938,12 +938,15 @@ class ROSArduinoBridge(Node):
         linear_displacement = (left_distance + right_distance) / 2
         angular_displacement = (right_distance - left_distance) / self.base_width
 
-        # Update pose
+        # Update pose (ONLY for raw /odom visualization - NOT used by EKF!)
+        # CRITICAL FIX: The EKF ignores our position/orientation and only uses velocities
+        # This prevents double-integration conflicts between encoder theta and IMU yaw
+        # The EKF will integrate our velocities with IMU orientation to get true pose
         self.odom_x += linear_displacement * math.cos(self.odom_theta)
         self.odom_y += linear_displacement * math.sin(self.odom_theta)
         self.odom_theta += angular_displacement
 
-        # Calculate velocities
+        # Calculate velocities (THESE are what the EKF uses for integration)
         linear_velocity = linear_displacement / dt
         angular_velocity = angular_displacement / dt
 
