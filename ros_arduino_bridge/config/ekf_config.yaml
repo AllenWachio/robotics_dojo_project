@@ -31,15 +31,15 @@ ekf_filter_node:
     # ---------------------------------------------
     odom0: /odom
     odom0_config: [
-        false,
-        false,
-        false, # x, y, z position (don't fuse position from wheels - drift accumulates)
-        false,
-        false,
-        false, # roll, pitch, yaw orientation (don't fuse yaw from wheels - slips during turns)
         true,
         true,
-        false, # x_vel, y_vel, z_vel (USE wheel velocities - accurate for straight motion)
+        false, # x, y, z position (USE position as reference - prevents unbounded drift)
+        false,
+        false,
+        false, # roll, pitch, yaw orientation (DON'T use encoder yaw - slips during turns)
+        true,
+        true,
+        false, # x_vel, y_vel, z_vel (USE wheel velocities - accurate for motion)
         false,
         false,
         false, # roll_vel, pitch_vel, yaw_vel (DISABLED - let IMU yaw handle rotation)
@@ -51,8 +51,10 @@ ekf_filter_node:
     odom0_differential: false # Use absolute measurements
     odom0_relative: false
 
-    # Wheel odometry is accurate for linear velocity but slips during rotation
-    # Higher covariance for yaw velocity means "trust this less during turns"
+    # CRITICAL: We MUST provide position to prevent unbounded drift
+    # EKF needs an anchor point - can't just integrate velocities forever
+    # Position covariance (0.01) tells EKF "trust this reasonably for location"
+    # Yaw covariance (0.5) tells EKF "DON'T trust this for rotation - use IMU instead"
 
     # ---------------------------------------------
     # Input Source 2: IMU (/imu/data)
@@ -82,8 +84,9 @@ ekf_filter_node:
     # Remove gravitational acceleration from IMU data
     imu0_remove_gravitational_acceleration: false # Disabled since we're not using accel data
 
-    # IMU is more accurate for angular velocity (no slip) but can drift over time
-    # Lower covariance for yaw_vel means "trust this more for rotation"
+    # IMU provides stable yaw orientation from DMP - NO drift like gyro integration
+    # Covariance (0.01) tells EKF "trust this for rotation - it's from magnetometer/DMP"
+    # This corrects the encoder's bad yaw estimate (which drifts during turns)
 
     # ---------------------------------------------
     # Process Noise Covariance
