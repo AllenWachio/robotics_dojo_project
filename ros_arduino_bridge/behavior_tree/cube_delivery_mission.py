@@ -187,10 +187,21 @@ def create_cube_delivery_tree():
     stop_for_detection = StopRobot("StopForDetection", duration=1.0)
     
     # Step 0.4: Activate camera servo for optimal viewing angle
+    # 45° = 50° (straight) - 5° (angled down slightly for plant detection)
     adjust_camera = ActivateCameraServo("AdjustCameraForPlant", target_angle=45)
     
-    # Step 0.5: Wait for disease detection
-    detect_disease = WaitForDiseaseDetection("DetectPotatoDisease", timeout=10.0)
+    # Step 0.5: Wait for disease detection (12 seconds max - then cancel and move on)
+    # Wrap in SuccessIsRunning decorator to make timeout non-fatal (converts FAILURE → SUCCESS)
+    detect_disease = py_trees.decorators.Timeout(
+        name="DiseaseDetectionTimeout",
+        child=WaitForDiseaseDetection("DetectPotatoDisease", timeout=12.0),
+        duration=12.5  # Slightly longer than behavior timeout
+    )
+    # Alternative: Use FailureIsSuccess to continue even if detection fails
+    detect_disease = py_trees.decorators.FailureIsSuccess(
+        name="OptionalDiseaseDetection",
+        child=detect_disease
+    )
     
     # Step 0.6: Return to origin
     return_to_origin = MoveToPosition(
@@ -298,8 +309,8 @@ def create_cube_delivery_tree():
     print("  0.1 → Move 1.22m forward, 0.15m right (relative)")
     print("  0.2 → Turn 90° left to face plant")
     print("  0.3 ⏸  Stop and stabilize")
-    print("  0.4 📷 Adjust camera servo to 45°")
-    print("  0.5 🔍 Wait for disease detection result")
+    print("  0.4 📷 Adjust camera servo to 45° (50° - 5°)")
+    print("  0.5 🔍 Wait for disease detection result (12s timeout, non-fatal)")
     print("  0.6 ← Return to origin (0, 0)")
     print("\n🎯 PHASE 1-9: CUBE DELIVERY")
     print("  1. → Move to Point 1 (pickup)")

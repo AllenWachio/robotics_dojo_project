@@ -823,6 +823,14 @@ class WaitForDiseaseDetection(py_trees.behaviour.Behaviour):
             self.logger.info(f"{self.name}: ✓ Detection complete: {self.detection_result}")
             return py_trees.common.Status.SUCCESS
         
+        # Check timeout
+        elapsed = time.time() - self.start_time
+        if elapsed >= self.timeout:
+            self.logger.warning(f"{self.name}: ⚠️  Detection timeout ({self.timeout}s) - cancelling and moving on")
+            # Store 'timeout' as result
+            self.blackboard.set('disease_detection_result', 'timeout')
+            return py_trees.common.Status.FAILURE
+        
         return py_trees.common.Status.RUNNING
     
     def terminate(self, new_status):
