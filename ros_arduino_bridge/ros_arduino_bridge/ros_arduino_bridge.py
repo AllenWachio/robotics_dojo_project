@@ -37,8 +37,10 @@ class ROSArduinoBridge(Node):
         self.declare_parameter("odom_frame", "odom")
         self.declare_parameter("base_frame", "base_link")
         
-        # TF publishing control (disable when using EKF for sensor fusion)
-        self.declare_parameter("publish_tf", True)
+        # TF publishing control
+        # Default: False (EKF publishes TF in sensor fusion mode)
+        # Set to True only for standalone operation without EKF
+        self.declare_parameter("publish_tf", False)
 
         # Get parameters
         self.serial_port = self.get_parameter("serial_port").value

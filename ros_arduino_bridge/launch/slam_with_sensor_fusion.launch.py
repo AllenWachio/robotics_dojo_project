@@ -72,6 +72,18 @@ def generate_launch_description():
     )
 
     # =====================================================================
+    # Static Transform: base_link → imu_link
+    # Publishes IMU position relative to robot base (3cm below center)
+    # =====================================================================
+    static_tf_imu = Node(
+        package='tf2_ros',
+        executable='static_transform_publisher',
+        name='static_transform_publisher_imu',
+        arguments=['0', '0', '-0.03', '0', '0', '0', 'base_link', 'imu_link'],
+        output='screen'
+    )
+
+    # =====================================================================
     # EKF Sensor Fusion Node - Fuses /odom + /imu/data
     # Outputs: /odometry/filtered (corrects wheel slippage during turns)
     # Publishes: odom→base_link transform
@@ -107,6 +119,7 @@ def generate_launch_description():
     return LaunchDescription([
         robot_state_publisher,
         arduino_bridge,
+        static_tf_imu,  # ← Static transform for IMU
         ekf_node,
         slam_toolbox_node
     ])

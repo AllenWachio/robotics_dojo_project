@@ -16,7 +16,8 @@ def generate_launch_description():
             'baud_rate': 57600,
             'base_width': 0.249000,      # Effective track width (20.8cm + 4.1cm wheel width)
             'wheel_radius': 0.042500,    # 85mm diameter wheels
-            'encoder_ticks_per_rev': 447  # Calibrated value
+            'encoder_ticks_per_rev': 447,  # Calibrated value
+            'publish_tf': True           # ⚠️ REQUIRED: No EKF in teleop mode, bridge must publish TF
         }]
     )
     
