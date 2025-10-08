@@ -81,9 +81,9 @@ echo ""
 
 # Get the absolute path to deployment and camera scripts
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-ARDUINO_SCRIPT="$HOME/ros2_ws/src/ros_arduino_bridge/deployment/scripts/pi/01_arduino_only.sh"
-LIDAR_SCRIPT="$HOME/ros2_ws/src/ros_arduino_bridge/deployment/scripts/pi/02_lidar_only.sh"
-CAMERA_SCRIPT="$HOME/ros2_ws/src/rpi_camera_package/scripts/pi/run_camera.sh"
+ARDUINO_SCRIPT="$HOME/ros2_ws/src/robotics_dojo_project/ros_arduino_bridge/deployment/scripts/pi/01_arduino_only.sh"
+LIDAR_SCRIPT="$HOME/ros2_ws/src/robotics_dojo_project/ros_arduino_bridge/deployment/scripts/pi/02_lidar_only.sh"
+CAMERA_SCRIPT="$HOME/ros2_ws/src/robotics_dojo_project/rpi_camera_package/scripts/pi/run_camera.sh"
 
 # Start Arduino (runs in background)
 echo "   📡 Starting Arduino bridge (using your script)..."
