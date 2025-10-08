@@ -88,9 +88,11 @@ ros2 launch ros_arduino_bridge pi_robot_hardware.launch.py \
 sleep 2
 
 echo "   Starting Pi Camera with compression..."
-ros2 launch rpi_camera_package camera_compressed.launch.py \
-    video_device:=/dev/video0 \
-    jpeg_quality:=80
+ros2 launch rpi_camera_package camera_rpicam.launch.py \
+    width:=$WIDTH \
+    height:=$HEIGHT \
+    framerate:=$FRAMERATE \
+    jpeg_quality:=$JPEG_QUALITY
 
 # Note: Both launch files will run. Press Ctrl+C to stop all.
 
