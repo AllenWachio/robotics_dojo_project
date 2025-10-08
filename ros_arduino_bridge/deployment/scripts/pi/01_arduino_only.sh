@@ -44,6 +44,6 @@ echo "   - Arduino bridge publishes: /odom (raw), /imu/data"
 echo "   - EKF publishes: /odometry/filtered (fused), TF transform"
 echo ""
 
-ros2 launch ros_arduino_bridge arduino_only.launch.py \
+ros2 launch ros_arduino_bridge arduino_bridge_with_ekf.launch.py \
     arduino_port:="$ARDUINO_PORT" \
     use_ekf:=true 
