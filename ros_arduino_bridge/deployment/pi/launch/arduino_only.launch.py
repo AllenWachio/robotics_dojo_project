@@ -101,13 +101,13 @@ def generate_launch_description():
     # Static Transform: imu_link -> base_link
     # Since IMU is rigidly mounted to base, they are at the same location
     # This allows IMU messages with frame_id='imu_link' to work with EKF expecting 'base_link'
-    static_tf_imu = Node(
-        package='tf2_ros',
-        executable='static_transform_publisher',
-        name='imu_to_base_link',
-        arguments=['0', '0', '0', '0', '0', '0', 'base_link', 'imu_link'],
-        output='screen'
-    )
+    # static_tf_imu = Node(
+    #     package='tf2_ros',
+    #     executable='static_transform_publisher',
+    #     name='imu_to_base_link',
+    #     arguments=['0', '0', '0', '0', '0', '0', 'base_link', 'imu_link'],
+    #     output='screen'
+    # )
 
     return LaunchDescription([
         # Launch arguments
