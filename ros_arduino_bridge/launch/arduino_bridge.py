@@ -11,6 +11,7 @@ def generate_launch_description():
     serial_port = LaunchConfiguration('serial_port', default='/dev/serial/by-id/usb-1a86_USB_Serial-if00-port0')
     use_rviz = LaunchConfiguration('use_rviz', default='true')
     urdf_file = LaunchConfiguration('urdf_file', default='new_robot_urdf.xacro')
+    publish_tf = LaunchConfiguration('publish_tf', default='true')  # Default: True for standalone use
     
     # Paths to package resources
     urdf_path = PathJoinSubstitution([
@@ -50,7 +51,8 @@ def generate_launch_description():
             'wheel_radius': 0.042500,    # 85mm diameter wheels
             'encoder_ticks_per_rev': 447,  # Calibrated value
             'max_linear_speed': 0.5,
-            'max_angular_speed': 1.0
+            'max_angular_speed': 1.0,
+            'publish_tf': publish_tf     # Configurable: True for standalone, False with EKF
         }]
     )
     
@@ -71,6 +73,8 @@ def generate_launch_description():
                              description='Launch RViz2 for visualization'),
         DeclareLaunchArgument('urdf_file', default_value=urdf_file,
                              description='URDF/XACRO file name'),
+        DeclareLaunchArgument('publish_tf', default_value=publish_tf,
+                             description='Publish odom→base_link TF (set false when using EKF)'),
         
         robot_state_publisher,
         arduino_bridge,
