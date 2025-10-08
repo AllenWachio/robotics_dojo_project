@@ -82,7 +82,6 @@ echo ""
 # Get the absolute path to deployment and camera scripts
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 ARDUINO_SCRIPT="$HOME/ros2_ws/src/robotics_dojo_project/ros_arduino_bridge/deployment/scripts/pi/01_arduino_only.sh"
-LIDAR_SCRIPT="$HOME/ros2_ws/src/robotics_dojo_project/ros_arduino_bridge/deployment/scripts/pi/02_lidar_only.sh"
 CAMERA_SCRIPT="$HOME/ros2_ws/src/robotics_dojo_project/rpi_camera_package/scripts/pi/run_camera.sh"
 
 # Start Arduino (runs in background)
@@ -93,13 +92,6 @@ ARDUINO_PID=$!
 # Wait for Arduino to initialize
 sleep 9
 
-# Start LiDAR (runs in background) - automatically selects option 1
-echo "   🔦 Starting LiDAR (using your script)..."
-echo "1" | $LIDAR_SCRIPT &
-LIDAR_PID=$!
-
-# Wait for LiDAR to initialize
-sleep 5
 
 # Start Camera (foreground - keeps terminal alive)
 echo "   📷 Starting Camera (using your script)..."
