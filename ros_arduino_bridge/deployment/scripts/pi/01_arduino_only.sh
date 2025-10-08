@@ -46,5 +46,5 @@ echo ""
 
 ros2 launch ros_arduino_bridge arduino_only.launch.py \
     arduino_port:="$ARDUINO_PORT" \
-    use_ekf:=true,
+    use_ekf:=true \ 
     publish_tf:=false
