@@ -38,6 +38,9 @@ def generate_launch_description():
     )
     
     # ROS Arduino Bridge Node (handles joint states internally)
+    # CRITICAL: publish_tf is DISABLED when using EKF sensor fusion!
+    # The EKF (robot_localization) publishes the fused odom→base_link transform
+    # If both nodes publish, you get TF conflicts causing RViz issues (wheels disappear!)
     arduino_bridge = Node(
         package='ros_arduino_bridge',
         executable='ros_arduino_bridge',
@@ -46,11 +49,12 @@ def generate_launch_description():
         parameters=[{
             'serial_port': serial_port,
             'baud_rate': 57600,
-            'base_width': 0.208000,      # 20.8cm wheelbase
+            'base_width': 0.249000,      # Effective track width (20.8cm + 4.1cm wheel width) - CALIBRATED
             'wheel_radius': 0.042500,    # 85mm diameter wheels
-            'encoder_ticks_per_rev': 447,
+            'encoder_ticks_per_rev': 447,  # Calibrated value
             'max_linear_speed': 0.5,
-            'max_angular_speed': 1.0
+            'max_angular_speed': 1.0,
+            'publish_tf': False  # ← CRITICAL: Disable TF to prevent conflict with EKF!
         }]
     )
     

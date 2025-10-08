@@ -1,0 +1,515 @@
+### EKF Configuration for Sensor Fusion
+### Fuses wheel odometry (/odom) with IMU data (/imu/data) to correct for wheel slippage
+### Outputs fused odometry on /odometry/filtered
+### UPDATED: Uses full 9-DOF IMU with proper unit conversion (rad/s, m/s²)
+
+ekf_filter_node:
+  ros__parameters:
+    # Frequency at which the filter publishes (Hz)
+    # Set to 20Hz for responsive updates while not overloading Pi
+    frequency: 20.0
+
+    # The filter can operate in 2D (false) or 3D (true) mode
+    # For differential drive on flat ground, 2D is appropriate
+    two_d_mode: true
+
+    # Transform publication settings
+    publish_tf: true
+    publish_acceleration: false
+
+    # Predict to current time to reduce latency
+    predict_to_current_time: true
+
+    # Map frame name (for localization/SLAM integration)
+    map_frame: map
+    odom_frame: odom
+    base_link_frame: base_link
+    world_frame: odom # For odometry-only fusion (not SLAM localization)
+
+    # ============================================
+    # Input Source 1: Wheel Odometry (/odom)
+    # ============================================
+    # Strategy: Use ONLY linear velocities from encoders
+    # Let EKF integrate velocity with IMU yaw to get position
+    # This prevents encoder slip from affecting orientation
+    odom0: /odom
+    odom0_config: [
+        false,
+        false,
+        false, # x, y, z position (DISABLED - let EKF integrate from velocities)
+        false,
+        false,
+        false, # roll, pitch, yaw orientation (DISABLED - use IMU yaw instead!)
+        true,
+        true,
+        false, # x_vel, y_vel, z_vel (ENABLED - encoders good for velocity)
+        false,
+        false,
+        false, # roll_vel, pitch_vel, yaw_vel (DISABLED - use IMU yaw directly!)
+        false,
+        false,
+        false, # x_accel, y_accel, z_accel (not provided)
+      ]
+    odom0_queue_size: 2
+    odom0_differential: false
+    odom0_relative: false
+    
+    # Covariance: Higher values = less trust
+    # Encoders slip during turns, so give them medium trust for velocity
+    odom0_twist_covariance: [
+        0.1,  0.0,  0.0,  0.0,  0.0,  0.0,   # vx: medium (encoders slip)
+        0.0,  0.1,  0.0,  0.0,  0.0,  0.0,   # vy: medium
+        0.0,  0.0,  1e6,  0.0,  0.0,  0.0,   # vz: not used
+        0.0,  0.0,  0.0,  1e6,  0.0,  0.0,   # vroll: not used
+        0.0,  0.0,  0.0,  0.0,  1e6,  0.0,   # vpitch: not used
+        0.0,  0.0,  0.0,  0.0,  0.0,  1e6    # vyaw: DISABLED (use IMU yaw!)
+      ]
+
+    # ============================================
+    # Input Source 2: IMU (/imu/data) - DMP Orientation
+    # ============================================
+    # Strategy: Use ONLY yaw orientation from DMP (drift-free!)
+    # Do NOT use angular velocity (raw gyro drifts even with calibration)
+    # Do NOT use acceleration (too noisy for position estimation)
+    imu0: /imu/data
+    imu0_config: [
+        false,
+        false,
+        false, # x, y, z position (IMU doesn't provide position)
+        false,
+        false,
+        true, # roll, pitch, yaw: ONLY YAW ENABLED (DMP yaw is drift-free!)
+        false,
+        false,
+        false, # x_vel, y_vel, z_vel (not provided by IMU)
+        false,
+        false,
+        false, # roll_vel, pitch_vel, yaw_vel (DISABLED - raw gyro drifts!)
+        false,
+        false,
+        false, # x_accel, y_accel, z_accel (DISABLED - too noisy)
+      ]
+    imu0_queue_size: 5
+    imu0_differential: false
+    imu0_relative: false
+    
+    # CRITICAL: Tell EKF which frame the IMU is in
+    # Must match the frame_id in Imu messages and static TF
+    imu0_frame_id: imu_link
+
+    # Don't remove gravity - we're not using acceleration anyway
+    imu0_remove_gravitational_acceleration: false
+
+    # Covariance: VERY LOW for yaw (DMP is excellent!)
+    # Roll/pitch not used in 2D mode but set high to be safe
+    imu0_orientation_covariance: [
+        1e6,  0.0,  0.0,    # roll: not used (2D mode)
+        0.0,  1e6,  0.0,    # pitch: not used (2D mode)
+        0.0,  0.0,  0.0005  # yaw: VERY LOW (trust DMP yaw completely!)
+      ]
+    
+    # Angular velocity: not used, set high to be safe
+    imu0_angular_velocity_covariance: [
+        1e6, 0.0, 0.0,
+        0.0, 1e6, 0.0,
+        0.0, 0.0, 1e6    # All disabled - don't use raw gyro
+      ]
+    
+    # Acceleration: not used, set high to be safe
+    imu0_linear_acceleration_covariance: [
+        1e6, 0.0, 0.0,
+        0.0, 1e6, 0.0,
+        0.0, 0.0, 1e6    # All disabled - too noisy
+      ]
+
+    # ============================================
+    # Process Noise Covariance
+    # ============================================
+    # How much we expect each state variable to change between updates
+    # Lower values = more trust in prediction, higher = more trust in measurements
+    # CRITICAL: Low yaw process noise because IMU yaw is very stable!
+    process_noise_covariance: [
+        0.05,  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,  # x: position changes
+        0, 0.05,  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,  # y: position changes
+        0, 0, 0.06, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,   # z: not used
+        0, 0, 0, 0.03, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,   # roll: not used
+        0, 0, 0, 0, 0.03, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,   # pitch: not used
+        0, 0, 0, 0, 0, 0.001, 0, 0, 0, 0, 0, 0, 0, 0, 0,  # yaw: VERY LOW (IMU stable!)
+        0, 0, 0, 0, 0, 0, 0.025, 0, 0, 0, 0, 0, 0, 0, 0,  # vx: velocity changes
+        0, 0, 0, 0, 0, 0, 0, 0.025, 0, 0, 0, 0, 0, 0, 0,  # vy: velocity changes
+        0, 0, 0, 0, 0, 0, 0, 0, 0.04, 0, 0, 0, 0, 0, 0,   # vz: not used
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0.01, 0, 0, 0, 0, 0,   # vroll: not used
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.01, 0, 0, 0, 0,   # vpitch: not used
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.001, 0, 0, 0,  # vyaw: LOW (IMU corrects)
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.01, 0, 0,   # ax: not used
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.01, 0,   # ay: not used
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.015   # az: not used
+      ]
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.025,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0, # x_vel
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.025,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0, # y_vel
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.04,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0, # z_vel
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.01,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0, # roll_vel
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.01,
+        0.0,
+        0.0,
+        0.0,
+        0.0, # pitch_vel
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.02,
+        0.0,
+        0.0,
+        0.0, # yaw_vel
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.01,
+        0.0,
+        0.0, # x_accel
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.01,
+        0.0, # y_accel
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.015, # z_accel
+      ]
+
+    # ---------------------------------------------
+    # Initial State Covariance
+    # ---------------------------------------------
+    initial_estimate_covariance:
+      [
+        1e-9,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1e-9,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1e-9,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1e-9,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1e-9,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1e-9,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1e-9,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1e-9,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1e-9,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1e-9,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1e-9,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1e-9,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1e-9,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1e-9,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1e-9,
+      ]
