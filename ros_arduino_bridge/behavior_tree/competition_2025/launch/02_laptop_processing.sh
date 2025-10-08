@@ -90,7 +90,7 @@ echo "🚀 Starting laptop processing using YOUR EXISTING SCRIPTS..."
 echo ""
 
 # Get the absolute paths to your existing scripts
-NAV_SCRIPT="$HOME/ros2_ws/src/ros_arduino_bridge/deployment/scripts/laptop/02c_slam_navigation_mode.sh"
+NAV_SCRIPT="$HOME/ros2_ws/src/ros_arduino_bridge/deployment/scripts/laptop/02_navigation_mode.sh"
 VISION_SCRIPT="$HOME/ros2_ws/src/rpi_camera_package/scripts/laptop/run_full_processing.sh"
 
 # Check if scripts exist
