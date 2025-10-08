@@ -77,10 +77,11 @@ ekf_filter_node:
     imu0_queue_size: 5 # Slightly larger to smooth bursts
     imu0_differential: false
     imu0_relative: false
-    
+
     # CRITICAL: Tell EKF which frame the IMU is in
     # Must match the frame_id in Imu messages and static TF
-    imu0_frame_id: imu_link
+    # Using base_link since IMU is rigidly mounted to the base
+    imu0_frame_id: base_link
 
     # Remove gravitational acceleration from IMU linear accel before fusion
     # This helps isolate actual robot motion from gravity
@@ -90,18 +91,42 @@ ekf_filter_node:
     # CRITICAL FOR DRIFT PREVENTION:
     # - Orientation covariance REDUCED (DMP is very stable)
     # - Gyro/Accel covariances NOT USED (disabled above to prevent drift)
-    imu0_orientation_covariance: [0.001, 0.0, 0.0,
-                                   0.0, 0.001, 0.0,
-                                   0.0, 0.0, 0.002]  # DMP orientation is excellent - trust it!
-    
+    imu0_orientation_covariance: [
+        0.001,
+        0.0,
+        0.0,
+        0.0,
+        0.001,
+        0.0,
+        0.0,
+        0.0,
+        0.002,
+      ] # DMP orientation is excellent - trust it!
+
     # These are not used since gyro/accel are disabled, but keep for reference
-    imu0_angular_velocity_covariance: [0.1, 0.0, 0.0,
-                                        0.0, 0.1, 0.0,
-                                        0.0, 0.0, 0.1]  # High values = low trust
-    
-    imu0_linear_acceleration_covariance: [1.0, 0.0, 0.0,
-                                           0.0, 1.0, 0.0,
-                                           0.0, 0.0, 1.0]  # High values = low trust
+    imu0_angular_velocity_covariance: [
+        0.1,
+        0.0,
+        0.0,
+        0.0,
+        0.1,
+        0.0,
+        0.0,
+        0.0,
+        0.1,
+      ] # High values = low trust
+
+    imu0_linear_acceleration_covariance: [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+      ] # High values = low trust
 
     # ---------------------------------------------
     # Process Noise Covariance

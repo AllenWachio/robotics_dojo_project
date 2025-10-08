@@ -97,6 +97,17 @@ def generate_launch_description():
         parameters=[ekf_config_path],
         condition=IfCondition(use_ekf)
     )
+    
+    # Static Transform: imu_link -> base_link
+    # Since IMU is rigidly mounted to base, they are at the same location
+    # This allows IMU messages with frame_id='imu_link' to work with EKF expecting 'base_link'
+    static_tf_imu = Node(
+        package='tf2_ros',
+        executable='static_transform_publisher',
+        name='imu_to_base_link',
+        arguments=['0', '0', '0', '0', '0', '0', 'base_link', 'imu_link'],
+        output='screen'
+    )
 
     return LaunchDescription([
         # Launch arguments
@@ -110,6 +121,7 @@ def generate_launch_description():
         # Nodes
         robot_state_publisher,
         arduino_bridge,
+        static_tf_imu,  # Publish imu_link -> base_link transform
         ekf_node,  # Only launches if use_ekf=true
         # NO LIDAR - Launch separately
     ])
