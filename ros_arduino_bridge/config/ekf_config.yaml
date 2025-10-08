@@ -81,7 +81,7 @@ ekf_filter_node:
     # CRITICAL: Tell EKF which frame the IMU is in
     # Must match the frame_id in Imu messages and static TF
     # Using base_link since IMU is rigidly mounted to the base
-    imu0_frame_id: base_link
+    imu0_frame_id: imu_link
 
     # Remove gravitational acceleration from IMU linear accel before fusion
     # This helps isolate actual robot motion from gravity
