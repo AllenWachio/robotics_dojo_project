@@ -10,15 +10,24 @@ I've updated the competition scripts to use **YOUR EXISTING** launch files inste
 
 **Script**: `01_pi_hardware.sh`
 
-**Launches YOUR files**:
+**Calls YOUR existing scripts**:
 
-1. **Arduino + LiDAR**: `ros_arduino_bridge/deployment/pi/launch/pi_robot_hardware.launch.py`
+1. **Arduino**: `deployment/scripts/pi/01_arduino_only.sh`
 
+   - Which launches: `arduino_only.launch.py`
    - ✅ Arduino bridge (motors, encoders, IMU, servos)
-   - ✅ LiDAR (SLLIDAR A1)
    - ✅ Robot State Publisher (TF tree)
+   - ✅ EKF sensor fusion (fuses encoders + IMU)
+   - ✅ Publishes `/odom`, `/imu/data`, `/odometry/filtered`
 
-2. **Camera**: `rpi_camera_package/launch/pi/camera_compressed.launch.py`
+2. **LiDAR**: `deployment/scripts/pi/02_lidar_only.sh`
+
+   - Which launches: `lidar.launch.py`
+   - ✅ SLLIDAR A1 driver
+   - ✅ Publishes `/scan`
+
+3. **Camera**: `rpi_camera_package/scripts/pi/run_camera.sh`
+   - Which launches: `camera_compressed.launch.py`
    - ✅ V4L2 camera capture
    - ✅ Image compression (JPEG quality 80)
    - ✅ Publishes `/camera/image_raw/compressed`
@@ -29,12 +38,13 @@ I've updated the competition scripts to use **YOUR EXISTING** launch files inste
 
 **Script**: `02_laptop_processing.sh`
 
-**Launches YOUR files**:
+**Calls YOUR existing scripts**:
 
-1. **Navigation**: `ros_arduino_bridge/deployment/laptop/launch/laptop_navigation.launch.py`
+1. **Navigation**: `deployment/scripts/laptop/02c_slam_navigation_mode.sh`
 
-   - ✅ Map Server (loads gamefield.yaml)
-   - ✅ AMCL Localization
+   - Which launches: `laptop_navigation_slam.launch.py`
+   - ✅ Map Server (loads gamefield map)
+   - ✅ SLAM Toolbox Localization
    - ✅ Nav2 Complete Stack:
      - Controller Server
      - Planner Server
@@ -45,10 +55,12 @@ I've updated the competition scripts to use **YOUR EXISTING** launch files inste
    - ✅ Lifecycle Manager
    - ✅ RViz2 with navigation interface
 
-2. **Vision Processing**: `rpi_camera_package/launch/laptop/full_processing.launch.py`
+2. **Vision Processing**: `rpi_camera_package/scripts/laptop/run_full_processing.sh`
+   - Which launches: `full_processing.launch.py`
    - ✅ Color Detection Node (OpenCV HSV)
    - ✅ Disease Detection Node (ML model)
    - ✅ Both subscribe to `/camera/image_raw/compressed`
+   - ✅ Comprehensive pre-flight checks (PyTorch, OpenCV, PIL)
 
 ---
 
@@ -251,15 +263,16 @@ monitor_camera = MonitorCameraForColor("MonitorZone", "red")
 ## 🏁 Competition Day Workflow
 
 ```bash
-# Step 1: On Pi (uses YOUR hardware launch files)
+# Step 1: On Pi (calls YOUR existing hardware scripts)
 ./01_pi_hardware.sh
-# → ros2 launch ros_arduino_bridge pi_robot_hardware.launch.py
-# → ros2 launch rpi_camera_package camera_compressed.launch.py
+# → deployment/scripts/pi/01_arduino_only.sh (Arduino + EKF)
+# → deployment/scripts/pi/02_lidar_only.sh (LiDAR)
+# → rpi_camera_package/scripts/pi/run_camera.sh (Camera)
 
-# Step 2: On Laptop (uses YOUR processing launch files)
+# Step 2: On Laptop (calls YOUR existing processing scripts)
 ./02_laptop_processing.sh
-# → ros2 launch ros_arduino_bridge laptop_navigation.launch.py
-# → ros2 launch rpi_camera_package full_processing.launch.py
+# → deployment/scripts/laptop/02c_slam_navigation_mode.sh (Nav2)
+# → rpi_camera_package/scripts/laptop/run_full_processing.sh (Vision)
 
 # Step 3: On Laptop (runs NEW behavior tree)
 ./03_run_mission.sh

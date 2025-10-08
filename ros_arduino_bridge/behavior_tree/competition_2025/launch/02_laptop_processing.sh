@@ -86,30 +86,62 @@ echo ""
 echo "════════════════════════════════════════════════════════════════"
 echo ""
 
-echo "🚀 Starting laptop processing..."
+echo "🚀 Starting laptop processing using YOUR EXISTING SCRIPTS..."
 echo ""
 
-# Launch laptop Nav2 using YOUR EXISTING launch file!
-# This uses: ros_arduino_bridge/deployment/laptop/launch/laptop_navigation.launch.py
-ros2 launch ros_arduino_bridge laptop_navigation.launch.py \
-    map_file:="${MAP_NAME}.yaml" \
-    map_path:="$MAP_PATH/" \
-    use_rviz:=true &
+# Get the absolute paths to your existing scripts
+NAV_SCRIPT="$HOME/ros2_ws/src/ros_arduino_bridge/deployment/scripts/laptop/02c_slam_navigation_mode.sh"
+VISION_SCRIPT="$HOME/ros2_ws/src/rpi_camera_package/scripts/laptop/run_full_processing.sh"
 
-# Wait for Nav2 to start
-sleep 5
+# Check if scripts exist
+if [ ! -f "$NAV_SCRIPT" ]; then
+    echo "❌ Navigation script not found: $NAV_SCRIPT"
+    exit 1
+fi
+
+if [ ! -f "$VISION_SCRIPT" ]; then
+    echo "❌ Vision processing script not found: $VISION_SCRIPT"
+    exit 1
+fi
+
+# Launch Navigation Stack using your deployment script (runs in background)
+echo "   🗺️  Starting Nav2 navigation stack..."
+echo "      Using: deployment/scripts/laptop/02c_slam_navigation_mode.sh"
+echo ""
+
+# Run navigation script in background with map name
+$NAV_SCRIPT "$MAP_NAME" &
+NAV_PID=$!
+
+echo "   ⏳ Waiting for Nav2 to initialize (10 seconds)..."
+sleep 10
+
+# Check if Nav2 is actually running
+if ros2 node list 2>/dev/null | grep -q "amcl"; then
+    echo "   ✅ Nav2 stack running"
+else
+    echo "   ⚠️  Nav2 might not be ready yet, continuing anyway..."
+fi
 
 echo ""
 echo "🎥 Starting vision processing..."
+echo "   Using: rpi_camera_package/scripts/laptop/run_full_processing.sh"
 echo ""
 
-# Launch camera processing using YOUR EXISTING launch file!
-# This uses: rpi_camera_package/launch/laptop/full_processing.launch.py
-ros2 launch rpi_camera_package full_processing.launch.py \
-    use_compressed:=true \
-    display_color:=false \
-    display_disease:=false \
-    inference_rate:=1.0
+# Launch vision processing (runs in foreground)
+# This will keep the terminal alive and show processing output
+$VISION_SCRIPT
+
+# When vision script exits (Ctrl+C), clean up navigation
+echo ""
+echo "════════════════════════════════════════════════════════════════"
+echo "   🛑 Stopping laptop processing..."
+echo "════════════════════════════════════════════════════════════════"
+
+# Kill navigation process
+kill $NAV_PID 2>/dev/null
+
+echo "   ✅ All laptop processing stopped"
 
 echo ""
 echo "════════════════════════════════════════════════════════════════"

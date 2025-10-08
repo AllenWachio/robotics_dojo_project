@@ -14,7 +14,7 @@ ekf_filter_node:
     two_d_mode: true
 
     # Transform publication settings
-    publish_tf: true
+    publish_tf: false
     publish_acceleration: false
 
     # Predict to current time to reduce latency
