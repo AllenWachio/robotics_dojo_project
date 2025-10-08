@@ -106,7 +106,7 @@ fi
 
 # Launch Navigation Stack using your deployment script (runs in background)
 echo "   🗺️  Starting Nav2 navigation stack..."
-echo "      Using: deployment/scripts/laptop/02c_slam_navigation_mode.sh"
+echo "      Using: deployment/scripts/laptop/02_navigation_mode.sh"
 echo ""
 
 # Run navigation script in background with map name
