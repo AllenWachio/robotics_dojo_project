@@ -179,20 +179,19 @@
   <!-- IMU Link (MPU6050) - 3cm below base_link center -->
   <link name="imu_link">
     <inertial>
-      <origin xyz="0 0 0" rpy="0 0 0"/>
-      <mass value="0.005"/>  <!-- MPU6050 is ~5 grams -->
-      <inertia ixx="0.000001" iyy="0.000001" izz="0.000001" 
-               ixy="0.0" iyz="0.0" ixz="0.0"/>
+      <origin xyz="1.974002378779538e-07 0.0 -0.000999999999999987" rpy="0 0 0"/>
+      <mass value="0.15700000000000014"/>
+      <inertia ixx="0.000131" iyy="0.000131" izz="0.000262" ixy="0.0" iyz="0.0" ixz="0.0"/>
     </inertial>
     <visual>
-      <origin xyz="-0.16 -0.08 0.03" rpy="0 0 0"/>
+      <origin xyz="-0.161429 -0.08 -0.0625" rpy="0 0 0"/>
       <geometry>
         <mesh filename="file://$(find ros_arduino_bridge)/meshes/imu_1.stl" scale="0.001 0.001 0.001"/>
       </geometry>
       <material name="silver"/>
     </visual>
     <collision>
-      <origin xyz="-0.16 -0.08 0.03" rpy="0 0 0"/>
+      <origin xyz="-0.161429 -0.08 -0.0625" rpy="0 0 0"/>
       <geometry>
         <mesh filename="file://$(find ros_arduino_bridge)/meshes/imu_1.stl" scale="0.001 0.001 0.001"/>
       </geometry>
@@ -200,7 +199,7 @@
   </link>
 
   <joint name="imu_joint" type="fixed">
-    <origin xyz="0.0 0.0 -0.03" rpy="0 0 0"/>
+    <origin xyz="0.161429 0.08 0.0625" rpy="0 0 0"/>
     <parent link="base_link"/>
     <child link="imu_link"/>
   </joint>
