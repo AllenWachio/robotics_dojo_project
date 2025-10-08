@@ -76,27 +76,44 @@ echo ""
 echo "════════════════════════════════════════════════════════════════"
 echo ""
 
-echo "🚀 Starting hardware nodes..."
+echo "🚀 Starting hardware nodes using YOUR EXISTING SCRIPTS..."
 echo ""
 
-# Launch Pi hardware using YOUR EXISTING launch files!
-echo "   Starting Arduino + LiDAR..."
-ros2 launch ros_arduino_bridge pi_robot_hardware.launch.py \
-    arduino_port:="$ARDUINO_PORT" &
+# Get the absolute path to deployment and camera scripts
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+ARDUINO_SCRIPT="$HOME/ros2_ws/src/ros_arduino_bridge/deployment/scripts/pi/01_arduino_only.sh"
+LIDAR_SCRIPT="$HOME/ros2_ws/src/ros_arduino_bridge/deployment/scripts/pi/02_lidar_only.sh"
+CAMERA_SCRIPT="$HOME/ros2_ws/src/rpi_camera_package/scripts/pi/run_camera.sh"
 
-# Wait a moment for hardware to initialize
-sleep 7
+# Start Arduino (runs in background)
+echo "   📡 Starting Arduino bridge (using your script)..."
+$ARDUINO_SCRIPT &
+ARDUINO_PID=$!
 
-echo "   Starting Pi Camera with compression..."
-ros2 launch rpi_camera_package camera_rpicam.launch.py \
-    width:=1280 \
-    height:=720 \
-    framerate:=15 \
-    jpeg_quality:=80
+# Wait for Arduino to initialize
+sleep 9
 
-# Note: Both launch files will run. Press Ctrl+C to stop all.
+# Start LiDAR (runs in background) - automatically selects option 1
+echo "   🔦 Starting LiDAR (using your script)..."
+echo "1" | $LIDAR_SCRIPT &
+LIDAR_PID=$!
 
+# Wait for LiDAR to initialize
+sleep 5
+
+# Start Camera (foreground - keeps terminal alive)
+echo "   📷 Starting Camera (using your script)..."
+$CAMERA_SCRIPT
+
+# When camera script exits (Ctrl+C), clean up background processes
 echo ""
 echo "════════════════════════════════════════════════════════════════"
-echo "   🛑 Pi hardware stopped"
+echo "   🛑 Stopping all Pi hardware..."
 echo "════════════════════════════════════════════════════════════════"
+
+# Kill Arduino and LiDAR processes
+kill $ARDUINO_PID 2>/dev/null
+kill $LIDAR_PID 2>/dev/null
+
+echo "   ✅ All hardware stopped"
+echo ""
