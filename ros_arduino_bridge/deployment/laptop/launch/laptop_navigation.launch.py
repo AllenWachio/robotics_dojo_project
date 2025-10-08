@@ -31,6 +31,12 @@ def generate_launch_description():
     autostart = LaunchConfiguration('autostart', default='true')
     use_sim_time = LaunchConfiguration('use_sim_time', default='false')
     
+    # Initial pose parameters (where robot starts on map)
+    initial_x = LaunchConfiguration('initial_x', default='0.0')
+    initial_y = LaunchConfiguration('initial_y', default='0.0')
+    initial_yaw = LaunchConfiguration('initial_yaw', default='0.0')
+    publish_initial_pose = LaunchConfiguration('publish_initial_pose', default='true')
+    
     # Configuration file paths
     nav2_params_file = PathJoinSubstitution([
         FindPackageShare('ros_arduino_bridge'),
@@ -179,6 +185,22 @@ def generate_launch_description():
             'check_path_planning': True
         }]
     )
+    
+    # Initial Pose Publisher - automatically sets robot's starting position
+    initial_pose_publisher_node = Node(
+        package='ros_arduino_bridge',
+        executable='initial_pose_publisher',
+        name='initial_pose_publisher',
+        output='screen',
+        parameters=[{
+            'initial_x': initial_x,
+            'initial_y': initial_y,
+            'initial_yaw': initial_yaw,
+            'publish_delay': 2.0,  # Wait 2 seconds for Nav2 to start
+            'publish_count': 3     # Publish 3 times to ensure AMCL receives it
+        }],
+        condition=IfCondition(publish_initial_pose)
+    )
 
     # Delayed startup for proper initialization
     delayed_rviz = TimerAction(period=3.0, actions=[rviz_node])
@@ -196,6 +218,14 @@ def generate_launch_description():
                              description='Automatically start navigation nodes'),
         DeclareLaunchArgument('use_sim_time', default_value=use_sim_time,
                              description='Use simulation time'),
+        DeclareLaunchArgument('initial_x', default_value=initial_x,
+                             description='Initial X position on map (meters)'),
+        DeclareLaunchArgument('initial_y', default_value=initial_y,
+                             description='Initial Y position on map (meters)'),
+        DeclareLaunchArgument('initial_yaw', default_value=initial_yaw,
+                             description='Initial yaw orientation on map (radians)'),
+        DeclareLaunchArgument('publish_initial_pose', default_value=publish_initial_pose,
+                             description='Automatically publish initial pose to AMCL'),
         
         # Core navigation nodes
         map_server_node,
@@ -207,6 +237,9 @@ def generate_launch_description():
         waypoint_follower_node,
         velocity_smoother_node,
         lifecycle_manager_node,
+        
+        # Initial pose publisher (starts AMCL localization)
+        initial_pose_publisher_node,
         
         # UI and monitoring (delayed start)
         delayed_rviz,

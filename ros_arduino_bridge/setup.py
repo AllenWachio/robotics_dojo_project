@@ -69,6 +69,7 @@ setup(
             'ros_arduino_bridge = ros_arduino_bridge.ros_arduino_bridge:main',
             'scan_throttle = ros_arduino_bridge.scan_throttle:main',
             'slam_diagnostics = ros_arduino_bridge.slam_diagnostics:main',
+            'initial_pose_publisher = ros_arduino_bridge.initial_pose_publisher:main',
         ],
     },
 )
